@@ -1,0 +1,1721 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPPG Digital Check - Monitoring Makan Bergizi Gratis</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- html2pdf.js for generating perfect PDF output matching official form -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            800: '#0B2545',
+                            900: '#07172C',
+                        },
+                        emerald: {
+                            500: '#10B981',
+                            600: '#059669',
+                        },
+                        pastel: {
+                            blue: '#E0F2FE',
+                            light: '#F0F9FF',
+                        },
+                        gold: {
+                            400: '#FBBF24',
+                            500: '#F59E0B',
+                            600: '#D97706',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        heading: ['Outfit', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8FAFC;
+            color: #1E293B;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F1F5F9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #CBD5E1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94A3B8;
+        }
+
+        /* Smooth tab transitions */
+        .tab-btn.active {
+            border-bottom: 3px solid #10B981;
+            color: #0B2545;
+            font-weight: 700;
+            background-color: rgba(16, 185, 129, 0.08);
+        }
+
+        /* Card Shadow effects */
+        .card-shadow {
+            box-shadow: 0 4px 20px -2px rgba(11, 37, 69, 0.08);
+        }
+
+        /* PDF Render Template styling - Exact match with SPPG Standard */
+        #pdfRenderTemplate {
+            width: 210mm; /* A4 width */
+            padding: 12mm;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10px;
+            color: #000;
+            background: #fff;
+            line-height: 1.3;
+        }
+
+        #pdfRenderTemplate table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 8px;
+        }
+
+        #pdfRenderTemplate th, #pdfRenderTemplate td {
+            border: 1px solid #333;
+            padding: 4px 6px;
+            vertical-align: top;
+        }
+
+        #pdfRenderTemplate th {
+            background-color: #e2e8f0;
+            font-weight: bold;
+            text-align: left;
+        }
+
+        .pdf-section-header {
+            background-color: #0B2545;
+            color: white;
+            padding: 4px 8px;
+            font-weight: bold;
+            font-size: 11px;
+            margin-top: 10px;
+            margin-bottom: 6px;
+            border-radius: 2px;
+        }
+
+        .pdf-checkbox {
+            display: inline-block;
+            width: 11px;
+            height: 11px;
+            border: 1px solid #000;
+            text-align: center;
+            line-height: 10px;
+            font-size: 9px;
+            font-weight: bold;
+            margin-right: 4px;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-50 text-slate-800">
+
+    <!-- HEADER NAVBAR -->
+    <header class="bg-navy-800 text-white shadow-lg sticky top-0 z-50 border-b-4 border-gold-500">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <!-- Logo & Title -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-md border border-emerald-400">
+                        <i class="fa-solid fa-apple-whole"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h1 class="text-xl sm:text-2xl font-extrabold font-heading tracking-wide text-white">SPPG DIGITAL</h1>
+                            <span class="bg-gold-500 text-navy-900 text-xs font-bold px-2.5 py-0.5 rounded-full shadow">MBG 2045</span>
+                        </div>
+                        <p class="text-xs text-pastel-blue font-medium hidden sm:block">Sistem Monitoring Hygiene, Sanitasi & Kualitas Makan Bergizi Gratis</p>
+                    </div>
+                </div>
+
+                <!-- Status Badges -->
+                <div class="hidden md:flex items-center space-x-4">
+                    <div class="bg-navy-900/60 border border-slate-700 rounded-lg px-3 py-1.5 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span class="text-xs text-slate-300">Sistem Online & Siap Input</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="bg-navy-900 px-4 sm:px-8 border-t border-slate-800">
+            <div class="max-w-7xl mx-auto flex space-x-2 overflow-x-auto py-1">
+                <button onclick="switchTab('form-tab')" id="nav-form-tab" class="tab-btn active px-4 py-2.5 text-sm font-medium rounded-t-lg transition flex items-center space-x-2 whitespace-nowrap text-slate-300 hover:text-white">
+                    <i class="fa-solid fa-file-pen text-emerald-500"></i>
+                    <span>Form Checklist SPPG</span>
+                </button>
+                <button onclick="switchTab('history-tab')" id="nav-history-tab" class="tab-btn px-4 py-2.5 text-sm font-medium rounded-t-lg transition flex items-center space-x-2 whitespace-nowrap text-slate-300 hover:text-white">
+                    <i class="fa-solid fa-database text-gold-500"></i>
+                    <span>Riwayat & Export Database</span>
+                </button>
+                <button onclick="switchTab('analytics-tab')" id="nav-analytics-tab" class="tab-btn px-4 py-2.5 text-sm font-medium rounded-t-lg transition flex items-center space-x-2 whitespace-nowrap text-slate-300 hover:text-white">
+                    <i class="fa-solid fa-chart-pie text-sky-400"></i>
+                    <span>Ringkasan Dashboard</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6">
+
+        <!-- TAB 1: FORM CHECKLIST INPUT -->
+        <div id="form-tab" class="tab-content">
+            
+            <!-- Banner Informatif -->
+            <div class="bg-gradient-to-r from-navy-800 to-slate-800 text-white rounded-2xl p-5 mb-6 shadow-md border-l-8 border-emerald-500 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold font-heading flex items-center gap-2">
+                        <i class="fa-solid fa-clipboard-check text-emerald-400"></i>
+                        CHECKLIST HARIAN KOORDINASI ZOOM & AUDIT SPPG
+                    </h2>
+                    <p class="text-sm text-slate-300 mt-1">
+                        Isi seluruh parameter di bawah ini. Bebas kertas, data otomatis tersimpan & siap diunduh menjadi berkas PDF standar resmi.
+                    </p>
+                </div>
+                <div class="flex gap-2 w-full md:w-auto">
+                    <button type="button" onclick="resetFormWithConfirm()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+                        <i class="fa-solid fa-rotate-left"></i> Reset Form
+                    </button>
+                    <button type="button" onclick="autoFillSampleData()" class="px-3 py-2 bg-gold-500 hover:bg-gold-600 text-navy-900 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Contoh Data
+                    </button>
+                </div>
+            </div>
+
+            <!-- FORM UTAMA -->
+            <form id="sppgForm" onsubmit="handleFormSubmit(event)" class="space-y-6">
+
+                <!-- INFORMASI HEADER KOORDINASI -->
+                <div class="bg-white rounded-2xl p-5 sm:p-6 card-shadow border border-slate-200">
+                    <div class="flex items-center space-x-3 mb-4 pb-3 border-b border-slate-100">
+                        <div class="w-8 h-8 rounded-lg bg-navy-800 text-gold-400 flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-building-columns"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-navy-800 font-heading">HEADER KOORDINASI SPPG</h3>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Nama SPPG <span class="text-red-500">*</span></label>
+                            <input type="text" id="nama_sppg" required placeholder="Contoh: SPPG Bandung Pusat" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Kepala SPPG <span class="text-red-500">*</span></label>
+                            <input type="text" id="kepala_sppg" required placeholder="Nama Kepala SPPG" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Pengawas Keuangan</label>
+                            <input type="text" id="pengawas_keuangan" placeholder="Nama Pengawas" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Pengawas Gizi</label>
+                            <input type="text" id="pengawas_gizi" placeholder="Nama Ahli Gizi" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Tanggal Audit <span class="text-red-500">*</span></label>
+                            <input type="date" id="tanggal_audit" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Jam Mulai Zoom</label>
+                            <input type="time" id="jam_zoom" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Asisten Lapangan</label>
+                            <input type="text" id="asisten_lapangan" placeholder="Nama Asisten" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Chef Utama</label>
+                            <input type="text" id="chef_nama" placeholder="Nama Chef" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BAGIAN I: DATA UMUM -->
+                <div class="bg-white rounded-2xl p-5 sm:p-6 card-shadow border border-slate-200">
+                    <div class="flex items-center space-x-3 mb-4 pb-3 border-b border-slate-100">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-bold">
+                            I
+                        </div>
+                        <h3 class="text-lg font-bold text-navy-800 font-heading">BAGIAN I. DATA UMUM</h3>
+                    </div>
+
+                    <!-- 1. Penerima Manfaat -->
+                    <div class="mb-6">
+                        <h4 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-users text-emerald-600"></i> 1. Jumlah Penerima Manfaat & Sertifikasi
+                        </h4>
+                        <div class="overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-slate-100 text-slate-700 font-bold text-xs uppercase">
+                                    <tr>
+                                        <th class="p-3 border-b">Kategori PM</th>
+                                        <th class="p-3 border-b w-1/3">PM Terdata (Potensi PM)</th>
+                                        <th class="p-3 border-b w-1/3">PM Dilayani Hari Ini</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-200">
+                                    <tr>
+                                        <td class="p-3 font-medium text-slate-700">Penerima Manfaat Peserta Didik</td>
+                                        <td class="p-2"><input type="number" id="pm_pd_potensi" oninput="calculatePMTotal()" min="0" placeholder="0" class="w-full px-3 py-1.5 border rounded-md text-sm"></td>
+                                        <td class="p-2"><input type="number" id="pm_pd_dilayani" oninput="calculatePMTotal()" min="0" placeholder="0" class="w-full px-3 py-1.5 border rounded-md text-sm"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-3 font-medium text-slate-700">Penerima Manfaat 3B (Ibu Hamil/Menyusui/Balita)</td>
+                                        <td class="p-2"><input type="number" id="pm_3b_potensi" oninput="calculatePMTotal()" min="0" placeholder="0" class="w-full px-3 py-1.5 border rounded-md text-sm"></td>
+                                        <td class="p-2"><input type="number" id="pm_3b_dilayani" oninput="calculatePMTotal()" min="0" placeholder="0" class="w-full px-3 py-1.5 border rounded-md text-sm"></td>
+                                    </tr>
+                                    <tr class="bg-emerald-50 font-bold">
+                                        <td class="p-3 text-navy-800">Total Penerima Manfaat</td>
+                                        <td class="p-3 text-emerald-700"><span id="pm_total_potensi">0</span> Orang</td>
+                                        <td class="p-3 text-emerald-700"><span id="pm_total_dilayani">0</span> Orang</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Status Sertifikasi Checklist -->
+                        <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 bg-pastel-light p-4 rounded-xl border border-sky-100">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Sertifikat SLHS</label>
+                                <div class="flex space-x-4">
+                                    <label class="inline-flex items-center text-sm cursor-pointer"><input type="radio" name="cert_slhs" value="Ya" class="text-emerald-600 focus:ring-emerald-500"> <span class="ml-1">Ya</span></label>
+                                    <label class="inline-flex items-center text-sm cursor-pointer"><input type="radio" name="cert_slhs" value="Tidak" checked class="text-emerald-600 focus:ring-emerald-500"> <span class="ml-1">Tidak</span></label>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Sertifikat Halal</label>
+                                <div class="flex space-x-4">
+                                    <label class="inline-flex items-center text-sm cursor-pointer"><input type="radio" name="cert_halal" value="Ya" class="text-emerald-600 focus:ring-emerald-500"> <span class="ml-1">Ya</span></label>
+                                    <label class="inline-flex items-center text-sm cursor-pointer"><input type="radio" name="cert_halal" value="Tidak" checked class="text-emerald-600 focus:ring-emerald-500"> <span class="ml-1">Tidak</span></label>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Sertifikat BNSP Chef</label>
+                                <div class="flex space-x-4">
+                                    <label class="inline-flex items-center text-sm cursor-pointer"><input type="radio" name="cert_bnsp" value="Ya" class="text-emerald-600 focus:ring-emerald-500"> <span class="ml-1">Ya</span></label>
+                                    <label class="inline-flex items-center text-sm cursor-pointer"><input type="radio" name="cert_bnsp" value="Tidak" checked class="text-emerald-600 focus:ring-emerald-500"> <span class="ml-1">Tidak</span></label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Air Bersih -->
+                    <div class="mb-6">
+                        <h4 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-droplet text-sky-500"></i> 2. Pengujian & Sumber Air Bersih
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Air Minum -->
+                            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                                <span class="font-bold text-xs text-navy-800 uppercase tracking-wider block border-b pb-1">Air Minum</span>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 mb-1">Sumber Air Minum</label>
+                                    <select id="air_minum_sumber" class="w-full p-2 border rounded-md text-sm bg-white">
+                                        <option value="RO">RO (Reverse Osmosis)</option>
+                                        <option value="Galon">Galon Kemasan</option>
+                                        <option value="PDAM">PDAM</option>
+                                        <option value="Sumur">Sumur Terlindung</option>
+                                        <option value="Lainnya">Lainnya</option>
+                                    </select>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-xs font-medium text-slate-600 mb-1">Tanggal/Jam Sampel</label>
+                                        <input type="datetime-local" id="air_minum_tgl" class="w-full p-2 border rounded-md text-xs bg-white">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-slate-600 mb-1">pH Air (Isi 'NA' bila tdk ada)</label>
+                                        <input type="text" id="air_minum_ph" placeholder="7.0 / NA" class="w-full p-2 border rounded-md text-xs bg-white">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Air Masak -->
+                            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                                <span class="font-bold text-xs text-navy-800 uppercase tracking-wider block border-b pb-1">Air Masak</span>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 mb-1">Sumber Air Masak</label>
+                                    <select id="air_masak_sumber" class="w-full p-2 border rounded-md text-sm bg-white">
+                                        <option value="RO">RO (Reverse Osmosis)</option>
+                                        <option value="Galon">Galon Kemasan</option>
+                                        <option value="PDAM">PDAM</option>
+                                        <option value="Sumur">Sumur Terlindung</option>
+                                        <option value="Lainnya">Lainnya</option>
+                                    </select>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-xs font-medium text-slate-600 mb-1">Tanggal/Jam Sampel</label>
+                                        <input type="datetime-local" id="air_masak_tgl" class="w-full p-2 border rounded-md text-xs bg-white">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-slate-600 mb-1">pH Air (Isi 'NA' bila tdk ada)</label>
+                                        <input type="text" id="air_masak_ph" placeholder="7.0 / NA" class="w-full p-2 border rounded-md text-xs bg-white">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Kondisi Ruangan -->
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-house-medical text-amber-500"></i> 3. Kondisi Ruangan & Sanitasi
+                        </h4>
+                        <div class="overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-slate-100 text-slate-700 font-bold text-xs uppercase">
+                                    <tr>
+                                        <th class="p-3 border-b text-center w-12">Cek</th>
+                                        <th class="p-3 border-b">Pertanyaan / Parameter Standard</th>
+                                        <th class="p-3 border-b w-36">Hasil</th>
+                                        <th class="p-3 border-b">Keterangan / Detail</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-200 text-xs sm:text-sm">
+                                    <tr>
+                                        <td class="p-3 text-center"><input type="checkbox" id="ruang_1_chk" class="w-4 h-4 text-emerald-600 rounded"></td>
+                                        <td class="p-3">Apakah semua ruangan memiliki termometer yang berfungsi dengan baik?</td>
+                                        <td class="p-3">
+                                            <select id="ruang_1_res" class="p-1.5 border rounded text-xs w-full"><option value="Ya">Ya</option><option value="Tidak">Tidak</option></select>
+                                        </td>
+                                        <td class="p-3"><input type="text" id="ruang_1_ket" placeholder="Jika tidak, sebutkan ruangan..." class="w-full p-1.5 border rounded text-xs"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-3 text-center"><input type="checkbox" id="ruang_2_chk" class="w-4 h-4 text-emerald-600 rounded"></td>
+                                        <td class="p-3">Apakah suhu di seluruh ruangan sudah sesuai standar? (Standar aman: 25°C - 30°C)</td>
+                                        <td class="p-3">
+                                            <select id="ruang_2_res" class="p-1.5 border rounded text-xs w-full"><option value="Ya">Ya</option><option value="Tidak">Tidak</option></select>
+                                        </td>
+                                        <td class="p-3"><input type="text" id="ruang_2_ket" placeholder="Suhu terkini: ... °C" class="w-full p-1.5 border rounded text-xs"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-3 text-center"><input type="checkbox" id="ruang_3_chk" class="w-4 h-4 text-emerald-600 rounded"></td>
+                                        <td class="p-3">Apakah ruangan dalam keadaan bersih sesuai dengan standar?</td>
+                                        <td class="p-3">
+                                            <select id="ruang_3_res" class="p-1.5 border rounded text-xs w-full"><option value="Ya">Ya</option><option value="Tidak">Tidak</option></select>
+                                        </td>
+                                        <td class="p-3"><input type="text" id="ruang_3_ket" placeholder="Catatan kebersihan..." class="w-full p-1.5 border rounded text-xs"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-3 text-center"><input type="checkbox" id="ruang_4_chk" class="w-4 h-4 text-emerald-600 rounded"></td>
+                                        <td class="p-3">Apakah terdapat insect killer yang berfungsi baik di ruang persiapan, pengolahan & pemorsian?</td>
+                                        <td class="p-3">
+                                            <select id="ruang_4_res" class="p-1.5 border rounded text-xs w-full"><option value="Ya">Ya</option><option value="Tidak">Tidak</option></select>
+                                        </td>
+                                        <td class="p-3"><input type="text" id="ruang_4_ket" placeholder="Jumlah unit berfungsi: ... unit" class="w-full p-1.5 border rounded text-xs"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BAGIAN II: PENERIMAAN DAN PENYIMPANAN BAHAN BAKU -->
+                <div class="bg-white rounded-2xl p-5 sm:p-6 card-shadow border border-slate-200">
+                    <div class="flex items-center space-x-3 mb-4 pb-3 border-b border-slate-100">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-bold">
+                            II
+                        </div>
+                        <h3 class="text-lg font-bold text-navy-800 font-heading">BAGIAN II. PENERIMAAN DAN PENYIMPANAN BAHAN BAKU</h3>
+                    </div>
+
+                    <!-- 1. Spesifikasi Bahan Baku -->
+                    <div class="mb-6">
+                        <h4 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-truck-ramp-box text-emerald-600"></i> 1. Spesifikasi Bahan Baku Diterima
+                        </h4>
+                        <div class="overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="w-full text-left text-xs sm:text-sm">
+                                <thead class="bg-slate-100 text-slate-700 font-bold uppercase">
+                                    <tr>
+                                        <th class="p-2.5 border-b text-center w-10">Cek</th>
+                                        <th class="p-2.5 border-b">Jenis Bahan Baku</th>
+                                        <th class="p-2.5 border-b">Jumlah</th>
+                                        <th class="p-2.5 border-b">Kualitas Bahan</th>
+                                        <th class="p-2.5 border-b">Waktu Terima</th>
+                                        <th class="p-2.5 border-b">Penerima & Ket</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-200">
+                                    <!-- Karbo -->
+                                    <tr>
+                                        <td class="p-2 text-center"><input type="checkbox" id="bb_karbo_chk" class="w-4 h-4 rounded"></td>
+                                        <td class="p-2 font-semibold text-slate-800">Karbohidrat</td>
+                                        <td class="p-2">
+                                            <select id="bb_karbo_jml" class="p-1 border rounded w-full"><option value="Sesuai">Sesuai</option><option value="Kurang">Kurang</option><option value="Lebih">Lebih</option></select>
+                                        </td>
+                                        <td class="p-2">
+                                            <select id="bb_karbo_kual" class="p-1 border rounded w-full"><option value="Baik/Sesuai">Baik/Sesuai</option><option value="Kurang Baik">Kurang Baik</option></select>
+                                        </td>
+                                        <td class="p-2"><input type="time" id="bb_karbo_jam" class="p-1 border rounded w-full"></td>
+                                        <td class="p-2"><input type="text" id="bb_karbo_penerima" placeholder="Nama Penerima / Ket" class="p-1 border rounded w-full"></td>
+                                    </tr>
+                                    <!-- Protein Hewani -->
+                                    <tr>
+                                        <td class="p-2 text-center"><input type="checkbox" id="bb_prohe_chk" class="w-4 h-4 rounded"></td>
+                                        <td class="p-2 font-semibold text-slate-800">Protein Hewani</td>
+                                        <td class="p-2">
+                                            <select id="bb_prohe_jml" class="p-1 border rounded w-full"><option value="Sesuai">Sesuai</option><option value="Kurang">Kurang</option><option value="Lebih">Lebih</option></select>
+                                        </td>
+                                        <td class="p-2">
+                                            <select id="bb_prohe_kual" class="p-1 border rounded w-full"><option value="Baik/Sesuai">Baik/Sesuai</option><option value="Kurang Baik">Kurang Baik</option></select>
+                                        </td>
+                                        <td class="p-2"><input type="time" id="bb_prohe_jam" class="p-1 border rounded w-full"></td>
+                                        <td class="p-2"><input type="text" id="bb_prohe_penerima" placeholder="Nama Penerima / Ket" class="p-1 border rounded w-full"></td>
+                                    </tr>
+                                    <!-- Protein Nabati -->
+                                    <tr>
+                                        <td class="p-2 text-center"><input type="checkbox" id="bb_prona_chk" class="w-4 h-4 rounded"></td>
+                                        <td class="p-2 font-semibold text-slate-800">Protein Nabati</td>
+                                        <td class="p-2">
+                                            <select id="bb_prona_jml" class="p-1 border rounded w-full"><option value="Sesuai">Sesuai</option><option value="Kurang">Kurang</option><option value="Lebih">Lebih</option></select>
+                                        </td>
+                                        <td class="p-2">
+                                            <select id="bb_prona_kual" class="p-1 border rounded w-full"><option value="Baik/Sesuai">Baik/Sesuai</option><option value="Kurang Baik">Kurang Baik</option></select>
+                                        </td>
+                                        <td class="p-2"><input type="time" id="bb_prona_jam" class="p-1 border rounded w-full"></td>
+                                        <td class="p-2"><input type="text" id="bb_prona_penerima" placeholder="Nama Penerima / Ket" class="p-1 border rounded w-full"></td>
+                                    </tr>
+                                    <!-- Buah -->
+                                    <tr>
+                                        <td class="p-2 text-center"><input type="checkbox" id="bb_buah_chk" class="w-4 h-4 rounded"></td>
+                                        <td class="p-2 font-semibold text-slate-800">Buah</td>
+                                        <td class="p-2">
+                                            <select id="bb_buah_jml" class="p-1 border rounded w-full"><option value="Sesuai">Sesuai</option><option value="Kurang">Kurang</option><option value="Lebih">Lebih</option></select>
+                                        </td>
+                                        <td class="p-2">
+                                            <select id="bb_buah_kual" class="p-1 border rounded w-full"><option value="Baik/Sesuai">Baik/Sesuai</option><option value="Kurang Baik">Kurang Baik</option></select>
+                                        </td>
+                                        <td class="p-2"><input type="time" id="bb_buah_jam" class="p-1 border rounded w-full"></td>
+                                        <td class="p-2"><input type="text" id="bb_buah_penerima" placeholder="Nama Penerima / Ket" class="p-1 border rounded w-full"></td>
+                                    </tr>
+                                    <!-- Sayur -->
+                                    <tr>
+                                        <td class="p-2 text-center"><input type="checkbox" id="bb_sayur_chk" class="w-4 h-4 rounded"></td>
+                                        <td class="p-2 font-semibold text-slate-800">Sayur</td>
+                                        <td class="p-2">
+                                            <select id="bb_sayur_jml" class="p-1 border rounded w-full"><option value="Sesuai">Sesuai</option><option value="Kurang">Kurang</option><option value="Lebih">Lebih</option></select>
+                                        </td>
+                                        <td class="p-2">
+                                            <select id="bb_sayur_kual" class="p-1 border rounded w-full"><option value="Baik/Sesuai">Baik/Sesuai</option><option value="Kurang Baik">Kurang Baik</option></select>
+                                        </td>
+                                        <td class="p-2"><input type="time" id="bb_sayur_jam" class="p-1 border rounded w-full"></td>
+                                        <td class="p-2"><input type="text" id="bb_sayur_penerima" placeholder="Nama Penerima / Ket" class="p-1 border rounded w-full"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 2. Suhu Bahan Baku & Storage -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div class="bg-pastel-blue/40 p-4 rounded-xl border border-sky-200">
+                            <span class="font-bold text-xs text-navy-800 uppercase block mb-2">Suhu Bahan Baku Beku Saat Diterima (Standar < -18°C)</span>
+                            <div class="space-y-2 text-xs">
+                                <div class="grid grid-cols-3 gap-2">
+                                    <input type="text" id="suhu_beku1_nama" placeholder="Bahan Beku 1 (Ikan/Ayam)" class="p-2 border rounded">
+                                    <input type="number" step="0.1" id="suhu_beku1_val" placeholder="Suhu (°C)" class="p-2 border rounded">
+                                    <input type="time" id="suhu_beku1_jam" class="p-2 border rounded">
+                                </div>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <input type="text" id="suhu_beku2_nama" placeholder="Bahan Beku 2" class="p-2 border rounded">
+                                    <input type="number" step="0.1" id="suhu_beku2_val" placeholder="Suhu (°C)" class="p-2 border rounded">
+                                    <input type="time" id="suhu_beku2_jam" class="p-2 border rounded">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-pastel-blue/40 p-4 rounded-xl border border-sky-200">
+                            <span class="font-bold text-xs text-navy-800 uppercase block mb-2">Suhu Alat Penyimpanan Cold Storage</span>
+                            <div class="space-y-2 text-xs">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-slate-600 mb-1">Suhu Chiller (&lt; 5°C)</label>
+                                        <div class="flex gap-1">
+                                            <input type="number" step="0.1" id="suhu_chiller_val" placeholder="°C" class="p-2 border rounded w-1/2">
+                                            <input type="time" id="suhu_chiller_jam" class="p-2 border rounded w-1/2">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-slate-600 mb-1">Suhu Freezer (&lt; -18°C)</label>
+                                        <div class="flex gap-1">
+                                            <input type="number" step="0.1" id="suhu_freezer_val" placeholder="°C" class="p-2 border rounded w-1/2">
+                                            <input type="time" id="suhu_freezer_jam" class="p-2 border rounded w-1/2">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Param Bahan Makanan -->
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full text-left text-xs sm:text-sm">
+                            <thead class="bg-slate-100 text-slate-700 font-bold uppercase">
+                                <tr>
+                                    <th class="p-3 border-b text-center w-10">Cek</th>
+                                    <th class="p-3 border-b">Parameter Bahan Makanan</th>
+                                    <th class="p-3 border-b w-32">Hasil</th>
+                                    <th class="p-3 border-b">Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200">
+                                <tr>
+                                    <td class="p-3 text-center"><input type="checkbox" id="bm_1_chk" class="w-4 h-4 rounded"></td>
+                                    <td class="p-3">Semua bahan (sayur, buah, daging, ayam, ikan, telur) dicuci pakai air dari sumber air bersih di atas?</td>
+                                    <td class="p-3"><select id="bm_1_res" class="p-1 border rounded w-full"><option value="Ya">Ya</option><option value="Tidak">Tidak</option></select></td>
+                                    <td class="p-3"><input type="text" id="bm_1_ket" placeholder="Sumber air pencucian..." class="p-1 border rounded w-full"></td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 text-center"><input type="checkbox" id="bm_2_chk" class="w-4 h-4 rounded"></td>
+                                    <td class="p-3">Apakah tahu disimpan di dalam chiller?</td>
+                                    <td class="p-3"><select id="bm_2_res" class="p-1 border rounded w-full"><option value="Ya">Ya</option><option value="Tidak">Tidak</option></select></td>
+                                    <td class="p-3"><input type="text" id="bm_2_ket" placeholder="Suhu chiller: ... °C" class="p-1 border rounded w-full"></td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 text-center"><input type="checkbox" id="bm_3_chk" class="w-4 h-4 rounded"></td>
+                                    <td class="p-3">Bahan yang datang paling awal dipakai lebih dulu sesuai Prinsip FIFO/FEFO?</td>
+                                    <td class="p-3"><select id="bm_3_res" class="p-1 border rounded w-full"><option value="Ya">Ya</option><option value="Tidak">Tidak</option></select></td>
+                                    <td class="p-3"><input type="text" id="bm_3_ket" placeholder="Keterangan rotasi bahan..." class="p-1 border rounded w-full"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- BAGIAN III: PERSIAPAN, PENGOLAHAN DAN PENDINGINAN -->
+                <div class="bg-white rounded-2xl p-5 sm:p-6 card-shadow border border-slate-200">
+                    <div class="flex items-center space-x-3 mb-4 pb-3 border-b border-slate-100">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-bold">
+                            III
+                        </div>
+                        <h3 class="text-lg font-bold text-navy-800 font-heading">BAGIAN III. PERSIAPAN, PENGOLAHAN DAN PENDINGINAN</h3>
+                    </div>
+
+                    <!-- 1. Personal Higiene Tim Persiapan -->
+                    <div class="mb-6">
+                        <h4 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-user-nurse text-sky-600"></i> 1. Personal Higiene Tim Persiapan
+                        </h4>
+                        <div class="space-y-3 bg-slate-50 p-4 rounded-xl border">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                                <div>
+                                    <label class="block font-semibold text-slate-700 mb-1">Pekerja Demam/Batuk/Diare/Luka?</label>
+                                    <select id="higiene_p_1_res" class="w-full p-2 border rounded bg-white"><option value="Tidak">Tidak Ada</option><option value="Ya">Ya (Sebutkan)</option></select>
+                                    <input type="text" id="higiene_p_1_ket" placeholder="Jika Ya: nama & keluhan" class="w-full p-1.5 border rounded mt-1 bg-white">
+                                </div>
+                                <div>
+                                    <label class="block font-semibold text-slate-700 mb-1">APD Lengkap (Masker, Hairnet, Sarung Tangan, Apron)?</label>
+                                    <select id="higiene_p_2_res" class="w-full p-2 border rounded bg-white"><option value="Ya">Ya (Lengkap)</option><option value="Tidak">Tidak Lengkap</option></select>
+                                    <input type="text" id="higiene_p_2_ket" placeholder="Kelengkapan APD..." class="w-full p-1.5 border rounded mt-1 bg-white">
+                                </div>
+                                <div>
+                                    <label class="block font-semibold text-slate-700 mb-1">Kepatuhan Cuci Tangan Pakai Sabun (CTPS)?</label>
+                                    <select id="higiene_p_3_res" class="w-full p-2 border rounded bg-white"><option value="Ya">Ya (Patuh)</option><option value="Tidak">Tidak</option></select>
+                                    <input type="text" id="higiene_p_3_ket" placeholder="Kepatuhan CTPS..." class="w-full p-1.5 border rounded mt-1 bg-white">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Persiapan & SOP -->
+                    <div class="mb-6">
+                        <h4 class="text-sm font-bold text-slate-700 mb-3">2. Tahapan Persiapan Bahan</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                            <div class="p-3 border rounded-xl">
+                                <label class="font-bold block mb-1">Protein Hewani Sesuai SOP?</label>
+                                <select id="prep_sop_res" class="w-full p-1.5 border rounded"><option value="Ya">Ya</option><option value="Tidak">Tidak</option></select>
+                            </div>
+                            <div class="p-3 border rounded-xl">
+                                <label class="font-bold block mb-1">Ada Bahan Berbau / Berlendir / Rusak?</label>
+                                <select id="prep_rusak_res" class="w-full p-1.5 border rounded"><option value="Tidak">Tidak Ada</option><option value="Ya">Ya</option></select>
+                                <input type="text" id="prep_rusak_ket" placeholder="Jika Ya, sebutkan bahan" class="w-full p-1 border rounded mt-1">
+                            </div>
+                            <div class="p-3 border rounded-xl">
+                                <label class="font-bold block mb-1">Kendala Tahap Persiapan?</label>
+                                <select id="prep_kendala_res" class="w-full p-1.5 border rounded"><option value="Tidak">Tidak Ada</option><option value="Ya">Ada Kendala</option></select>
+                                <input type="text" id="prep_kendala_ket" placeholder="Sebutkan kendala jika ada" class="w-full p-1 border rounded mt-1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. MENU RAWAN HARI INI -->
+                    <div class="mb-6">
+                        <h4 class="text-sm font-bold text-red-600 mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-triangle-exclamation text-amber-500"></i> 3. Checklist Menu Rawan Hari Ini
+                        </h4>
+                        <div class="overflow-x-auto rounded-xl border border-amber-200 bg-amber-50/30">
+                            <table class="w-full text-left text-xs sm:text-sm">
+                                <thead class="bg-amber-100 text-amber-900 font-bold uppercase text-xs">
+                                    <tr>
+                                        <th class="p-2.5 border-b w-1/3">Kategori Menu Rawan</th>
+                                        <th class="p-2.5 border-b w-24">Ada Menu Ini?</th>
+                                        <th class="p-2.5 border-b">Parameter Pengawasan Khusus & Mitigasi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-amber-100 text-xs">
+                                    <tr>
+                                        <td class="p-2.5 font-bold">Ikan / Seafood</td>
+                                        <td class="p-2.5"><select id="mr_ikan" class="p-1 border rounded"><option value="Ya">Ya</option><option value="Tidak">Tidak</option></select></td>
+                                        <td class="p-2.5 text-slate-600">Disimpan dingin sejak diterima (tidak didiamkan suhu ruang), tidak berbau amis menyengat.</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-2.5 font-bold">Ayam Bersantan / Berkuah Kental</td>
+                                        <td class="p-2.5"><select id="mr_santan" class="p-1 border rounded"><option value="Ya">Ya</option><option value="Tidak">Tidak</option></select></td>
+                                        <td class="p-2.5 text-slate-600">Kuah/santan tidak didiamkan &gt; 2 jam suhu ruang sebelum dibagikan.</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-2.5 font-bold">Ayam Diolah Ulang (Suwir/Campur)</td>
+                                        <td class="p-2.5"><select id="mr_suwir" class="p-1 border rounded"><option value="Ya">Ya</option><option value="Tidak">Tidak</option></select></td>
+                                        <td class="p-2.5 text-slate-600">Proses suwir/campur wajib pakai sarung tangan bersih.</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-2.5 font-bold">Telur (Terutama Telur Dadar)</td>
+                                        <td class="p-2.5"><select id="mr_telur" class="p-1 border rounded"><option value="Ya">Ya</option><option value="Tidak">Tidak</option></select></td>
+                                        <td class="p-2.5 text-slate-600">Matang sempurna & pemorsian pakai sarung tangan.</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-2.5 font-bold">Susu / Olahan Susu</td>
+                                        <td class="p-2.5"><select id="mr_susu" class="p-1 border rounded"><option value="Ya">Ya</option><option value="Tidak">Tidak</option></select></td>
+                                        <td class="p-2.5 text-slate-600">Sudah dipasteurisasi (bukan susu mentah).</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 4. Pengolahan & Pendinginan -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Pengolahan -->
+                        <div class="p-4 border rounded-xl bg-slate-50 space-y-2 text-xs">
+                            <span class="font-bold text-navy-800 text-sm block border-b pb-1">4 & 5. Pengolahan Makanan</span>
+                            <div>
+                                <label class="block font-semibold">Tingkat Kematangan Daging/Ayam/Ikan/Telur</label>
+                                <select id="masak_matang" class="p-1.5 border rounded w-full bg-white"><option value="Matang Sempurna">Matang Sempurna (Tidak Ada Merah Muda)</option><option value="Kurang Matang">Kurang Matang</option></select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block font-semibold">Suhu Matang (°C)</label>
+                                    <input type="number" step="0.1" id="masak_suhu" placeholder="Contoh: 85°C" class="p-1.5 border rounded w-full bg-white">
+                                </div>
+                                <div>
+                                    <label class="block font-semibold">Jam Pengukuran</label>
+                                    <input type="time" id="masak_jam" class="p-1.5 border rounded w-full bg-white">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block font-semibold">Kendala Pengolahan</label>
+                                <input type="text" id="masak_kendala" placeholder="Keterangan kendala jika ada..." class="p-1.5 border rounded w-full bg-white">
+                            </div>
+                        </div>
+
+                        <!-- Pendinginan -->
+                        <div class="p-4 border rounded-xl bg-slate-50 space-y-2 text-xs">
+                            <span class="font-bold text-navy-800 text-sm block border-b pb-1">6. Proses Pendinginan Makanan</span>
+                            <div>
+                                <label class="block font-semibold">Ruang Steril Pendinginan Khusus</label>
+                                <select id="dingin_ruang" class="p-1.5 border rounded w-full bg-white"><option value="Ada & Steril">Ada & Steril</option><option value="Tidak Ada">Tidak Ada / Kurang Steril</option></select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block font-semibold">Suhu Makanan Jadi (°C)</label>
+                                    <input type="number" step="0.1" id="dingin_suhu" placeholder="Standar Panas >60 / Cold <-5" class="p-1.5 border rounded w-full bg-white">
+                                </div>
+                                <div>
+                                    <label class="block font-semibold">Nasi &gt; 2 Jam Suhu Ruang?</label>
+                                    <select id="dingin_nasi" class="p-1.5 border rounded w-full bg-white"><option value="Tidak">Tidak (&lt; 2 Jam)</option><option value="Ya">Ya (&gt; 2 Jam)</option></select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block font-semibold">Kendala Pendinginan</label>
+                                <input type="text" id="dingin_kendala" placeholder="Keterangan kendala..." class="p-1.5 border rounded w-full bg-white">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BAGIAN IV: PEMORSIAN DAN DISTRIBUSI -->
+                <div class="bg-white rounded-2xl p-5 sm:p-6 card-shadow border border-slate-200">
+                    <div class="flex items-center space-x-3 mb-4 pb-3 border-b border-slate-100">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-bold">
+                            IV
+                        </div>
+                        <h3 class="text-lg font-bold text-navy-800 font-heading">BAGIAN IV. PEMORSIAN DAN DISTRIBUSI</h3>
+                    </div>
+
+                    <!-- 1. Pemorsian & Quality Control -->
+                    <div class="mb-6 space-y-4">
+                        <h4 class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                            <i class="fa-solid fa-utensils text-emerald-600"></i> 1. Pemorsian, QC Organoleptik & Sampel
+                        </h4>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs bg-slate-50 p-4 rounded-xl border">
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1">Memenuhi Standar Gizi & URT?</label>
+                                <select id="porsi_urt" class="w-full p-2 border rounded bg-white"><option value="Ya">Ya (Sesuai URT)</option><option value="Tidak">Tidak</option></select>
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1">Suhu Saat Pemorsian (°C)</label>
+                                <input type="number" step="0.1" id="porsi_suhu" placeholder="Standar Panas >60°C" class="w-full p-2 border rounded bg-white">
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-700 mb-1">Penyimpanan 2 Sampel Menu (Chiller & Freezer)</label>
+                                <select id="porsi_sampel" class="w-full p-2 border rounded bg-white"><option value="Ya">Ya (Lengkap disimpan)</option><option value="Tidak">Tidak Dilakukan</option></select>
+                            </div>
+                        </div>
+
+                        <!-- Quality Control Organoleptik -->
+                        <div class="bg-pastel-blue/30 p-4 rounded-xl border border-sky-100 text-xs space-y-2">
+                            <span class="font-bold text-navy-800 block border-b border-sky-200 pb-1">Uji Organoleptik Sederhana (Rasa, Aroma, Tekstur)</span>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <input type="text" id="qc_oleh" placeholder="Dilakukan oleh (Nama/Jabatan)" class="p-2 border rounded bg-white">
+                                <input type="time" id="qc_jam" class="p-2 border rounded bg-white">
+                                <input type="text" id="qc_hasil" placeholder="Hasil uji (Sesuai/Layak/Aman)" class="p-2 border rounded bg-white">
+                            </div>
+                        </div>
+
+                        <!-- Detail Sisa Makanan -->
+                        <div class="bg-slate-50 p-4 rounded-xl border text-xs">
+                            <span class="font-bold text-slate-700 block mb-2">Detail Sisa Makanan Setelah Pemorsian (kg)</span>
+                            <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                                <div>
+                                    <label class="block text-slate-500">Karbohidrat</label>
+                                    <input type="number" step="0.1" id="sisa_karbo" placeholder="0 kg" class="w-full p-1.5 border rounded bg-white">
+                                </div>
+                                <div>
+                                    <label class="block text-slate-500">Pro-Hewani</label>
+                                    <input type="number" step="0.1" id="sisa_prohe" placeholder="0 kg" class="w-full p-1.5 border rounded bg-white">
+                                </div>
+                                <div>
+                                    <label class="block text-slate-500">Pro-Nabati</label>
+                                    <input type="number" step="0.1" id="sisa_prona" placeholder="0 kg" class="w-full p-1.5 border rounded bg-white">
+                                </div>
+                                <div>
+                                    <label class="block text-slate-500">Sayur</label>
+                                    <input type="number" step="0.1" id="sisa_sayur" placeholder="0 kg" class="w-full p-1.5 border rounded bg-white">
+                                </div>
+                                <div>
+                                    <label class="block text-slate-500">Buah</label>
+                                    <input type="number" step="0.1" id="sisa_buah" placeholder="0 kg" class="w-full p-1.5 border rounded bg-white">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Alat & Tempat & 3. Distribusi -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Alat & Sanitasi -->
+                        <div class="p-4 border rounded-xl bg-slate-50 space-y-2 text-xs">
+                            <span class="font-bold text-navy-800 text-sm block border-b pb-1">2. Alat & Tempat Kerja</span>
+                            <div class="space-y-2">
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="alat_pisah" checked class="rounded"> <span>Alat pengolahan dipisah per jenis bahan</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="alat_bersih" checked class="rounded"> <span>Meja & alat masak bersih & kering</span></label>
+                                <label class="flex items-center space-x-2"><input type="checkbox" id="alat_sanitasi" checked class="rounded"> <span>Sanitasi fisik, lantai & pipa tidak bocor/tergenang</span></label>
+                            </div>
+                        </div>
+
+                        <!-- Logistik Distribusi & Suhu -->
+                        <div class="p-4 border rounded-xl bg-slate-50 space-y-2 text-xs">
+                            <span class="font-bold text-navy-800 text-sm block border-b pb-1">3. Waktu & Suhu Distribusi</span>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div><label class="block text-slate-600">Jam Selesai Masak</label><input type="time" id="dist_jam_masak" class="w-full p-1.5 border rounded bg-white"></div>
+                                <div><label class="block text-slate-600">Jam Berangkat SPPG</label><input type="time" id="dist_jam_berangkat" class="w-full p-1.5 border rounded bg-white"></div>
+                                <div><label class="block text-slate-600">Jam Tiba Lokasi</label><input type="time" id="dist_jam_tiba" class="w-full p-1.5 border rounded bg-white"></div>
+                                <div><label class="block text-slate-600">Jam Konsumsi (&lt;4 jam)</label><input type="time" id="dist_jam_konsumsi" class="w-full p-1.5 border rounded bg-white"></div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 pt-1 border-t">
+                                <div><label class="block text-slate-600">Suhu Makanan Panas (°C)</label><input type="number" step="0.1" id="dist_suhu_panas" placeholder="> 60°C" class="w-full p-1.5 border rounded bg-white"></div>
+                                <div><label class="block text-slate-600">Label/Segel Ompreng</label><select id="dist_segel" class="w-full p-1.5 border rounded bg-white"><option value="Ya">Ya (Terpasang)</option><option value="Tidak">Tidak</option></select></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BAGIAN V: TEMUAN & KEPUTUSAN FINAL -->
+                <div class="bg-navy-800 text-white rounded-2xl p-5 sm:p-6 shadow-xl border-t-4 border-gold-500">
+                    <div class="flex items-center space-x-3 mb-4 pb-3 border-b border-slate-700">
+                        <div class="w-8 h-8 rounded-lg bg-gold-500 text-navy-900 flex items-center justify-center font-bold">
+                            V
+                        </div>
+                        <h3 class="text-lg font-bold text-white font-heading">BAGIAN V. TEMUAN & KEPUTUSAN FINAL</h3>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1">Catatan Temuan (Apabila ada kekurangan / ketidaksesuaian)</label>
+                            <textarea id="temuan_catatan" rows="2" placeholder="Tuliskan temuan khusus atau hal penting saat koordinasi/audit..." class="w-full p-3 bg-navy-900 border border-slate-700 rounded-xl text-sm text-white focus:ring-2 focus:ring-emerald-500 outline-none"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-bold text-gold-400 mb-2">KEPUTUSAN FINAL PRODUKSI / DISTRIBUSI <span class="text-red-400">*</span></label>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <label class="border border-emerald-500/50 bg-emerald-950/40 p-3 rounded-xl flex items-start space-x-3 cursor-pointer hover:bg-emerald-900/40 transition">
+                                    <input type="radio" name="keputusan_final" value="GO-produksi dapat dimulai / dilanjutkan" checked class="mt-1 text-emerald-500">
+                                    <div>
+                                        <span class="font-bold text-emerald-400 text-sm block">GO</span>
+                                        <span class="text-xs text-slate-300">Produksi dapat dimulai / dilanjutkan penuh.</span>
+                                    </div>
+                                </label>
+
+                                <label class="border border-amber-500/50 bg-amber-950/40 p-3 rounded-xl flex items-start space-x-3 cursor-pointer hover:bg-amber-900/40 transition">
+                                    <input type="radio" name="keputusan_final" value="GO dengan catatan lanjut, perbaikan segera" class="mt-1 text-amber-500">
+                                    <div>
+                                        <span class="font-bold text-amber-400 text-sm block">GO DENGAN CATATAN</span>
+                                        <span class="text-xs text-slate-300">Lanjut dengan catatan perbaikan segera.</span>
+                                    </div>
+                                </label>
+
+                                <label class="border border-rose-500/50 bg-rose-950/40 p-3 rounded-xl flex items-start space-x-3 cursor-pointer hover:bg-rose-900/40 transition">
+                                    <input type="radio" name="keputusan_final" value="NO-GO-eskalasi ke Dinkes / BGN sebelum masak / distribusi dilanjutkan" class="mt-1 text-rose-500">
+                                    <div>
+                                        <span class="font-bold text-rose-400 text-sm block">NO-GO (STOP)</span>
+                                        <span class="text-xs text-slate-300">Eskalasi ke Dinkes / BGN sebelum lanjut.</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Emergency Contact Footer Info -->
+                        <div class="mt-4 pt-4 border-t border-slate-700/80 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
+                            <span class="font-bold text-emerald-400"><i class="fa-solid fa-phone-volume mr-1"></i> KONTAK DARURAT KEMENKES PHEOC:</span>
+                            <span>PSC 119</span>
+                            <span>WA: +62 8777 7591097</span>
+                            <span>Email: pheoc.indonesia@kemkes.go.id</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUBMIT BUTTONS -->
+                <div class="flex flex-col sm:flex-row items-center justify-end gap-3 pt-4">
+                    <button type="button" onclick="saveAndDownloadPDF()" class="w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 transition transform active:scale-95">
+                        <i class="fa-solid fa-file-pdf text-lg"></i>
+                        <span>Simpan & Download PDF Official</span>
+                    </button>
+                    <button type="submit" class="w-full sm:w-auto px-6 py-3.5 bg-navy-800 hover:bg-navy-900 text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2 transition">
+                        <i class="fa-solid fa-floppy-disk text-gold-400"></i>
+                        <span>Simpan Ke Database Saja</span>
+                    </button>
+                </div>
+
+            </form>
+        </div>
+
+        <!-- TAB 2: DATABASE RIWAYAT & FILTER TANGGAL -->
+        <div id="history-tab" class="tab-content hidden">
+            
+            <div class="bg-white rounded-2xl p-5 sm:p-6 card-shadow border border-slate-200 mb-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b">
+                    <div>
+                        <h2 class="text-xl font-bold font-heading text-navy-800 flex items-center gap-2">
+                            <i class="fa-solid fa-database text-gold-500"></i>
+                            DATABASE MONITORING SPPG
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-1">Cari, filter berdasarkan tanggal, ekspor data atau unduh ulang PDF checklist.</p>
+                    </div>
+
+                    <!-- Date Range Filter -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex items-center space-x-1 text-xs">
+                            <span class="font-bold text-slate-600">Dari:</span>
+                            <input type="date" id="filter_start" onchange="applyDateFilter()" class="p-2 border rounded-lg bg-slate-50">
+                        </div>
+                        <div class="flex items-center space-x-1 text-xs">
+                            <span class="font-bold text-slate-600">S/D:</span>
+                            <input type="date" id="filter_end" onchange="applyDateFilter()" class="p-2 border rounded-lg bg-slate-50">
+                        </div>
+                        <button onclick="resetDateFilter()" class="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold rounded-lg transition">
+                            Reset
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Export & Summary Buttons -->
+                <div class="flex flex-wrap items-center justify-between gap-3 my-4">
+                    <div class="text-xs text-slate-600 font-semibold">
+                        Menampilkan <span id="recordCount" class="text-emerald-600 font-bold">0</span> Laporan Tersimpan
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="exportToCSV()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-file-excel"></i> Export CSV/Excel
+                        </button>
+                        <button onclick="clearAllDataConfirm()" class="px-3.5 py-2 bg-rose-100 text-rose-700 hover:bg-rose-200 font-bold rounded-lg text-xs flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-trash-can"></i> Hapus Semua Data
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabel Data -->
+                <div class="overflow-x-auto rounded-xl border border-slate-200">
+                    <table class="w-full text-left text-xs sm:text-sm">
+                        <thead class="bg-navy-800 text-white font-bold text-xs uppercase">
+                            <tr>
+                                <th class="p-3">Tanggal</th>
+                                <th class="p-3">Nama SPPG</th>
+                                <th class="p-3">Kepala SPPG</th>
+                                <th class="p-3">PM Dilayani</th>
+                                <th class="p-3">Keputusan Final</th>
+                                <th class="p-3 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody" class="divide-y divide-slate-200 bg-white">
+                            <!-- Populated dynamically via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- TAB 3: RINGKASAN DASHBOARD -->
+        <div id="analytics-tab" class="tab-content hidden">
+            
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white p-5 rounded-2xl card-shadow border border-slate-200">
+                    <span class="text-xs font-bold text-slate-500 uppercase">Total Audit SPPG</span>
+                    <div class="text-3xl font-black font-heading text-navy-800 mt-1" id="stat_total">0</div>
+                    <p class="text-xs text-slate-400 mt-1">Laporan terdata</p>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl card-shadow border border-slate-200 border-l-4 border-l-emerald-500">
+                    <span class="text-xs font-bold text-slate-500 uppercase">Status 'GO' Lulus</span>
+                    <div class="text-3xl font-black font-heading text-emerald-600 mt-1" id="stat_go">0</div>
+                    <p class="text-xs text-emerald-600 font-semibold mt-1" id="stat_go_pct">0% dari total</p>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl card-shadow border border-slate-200 border-l-4 border-l-amber-500">
+                    <span class="text-xs font-bold text-slate-500 uppercase">GO Dengan Catatan</span>
+                    <div class="text-3xl font-black font-heading text-amber-500 mt-1" id="stat_catatan">0</div>
+                    <p class="text-xs text-amber-600 font-semibold mt-1">Perlu perbaikan</p>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl card-shadow border border-slate-200 border-l-4 border-l-rose-500">
+                    <span class="text-xs font-bold text-slate-500 uppercase">NO-GO / Stop Eskalasi</span>
+                    <div class="text-3xl font-black font-heading text-rose-600 mt-1" id="stat_nogo">0</div>
+                    <p class="text-xs text-rose-600 font-semibold mt-1">Eskalasi Dinkes/BGN</p>
+                </div>
+            </div>
+
+            <!-- Visi Generasi Emas Card -->
+            <div class="bg-gradient-to-br from-navy-900 via-navy-800 to-slate-900 text-white p-6 rounded-2xl shadow-xl relative overflow-hidden border border-gold-500/30">
+                <div class="relative z-10 max-w-2xl">
+                    <span class="bg-gold-500/20 text-gold-400 border border-gold-500/30 text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-widest inline-block mb-3">Visi Indonesia Emas 2045</span>
+                    <h3 class="text-2xl font-bold font-heading">Kesehatan & Stabilitas Gizi Anak Bangsa</h3>
+                    <p class="text-sm text-slate-300 mt-2 leading-relaxed">
+                        Monitoring berkala SPPG memastikan standar kebersihan, suhu penyimpanan dingin, pemorsian berimbang, dan eliminasi risiko kontaminasi mikroba (E. coli, Salmonella, Bacillus cereus) secara konsisten demi Generasi Emas yang kuat dan cerdas.
+                    </p>
+                </div>
+                <div class="absolute right-4 bottom-4 text-slate-700/20 text-9xl pointer-events-none">
+                    <i class="fa-solid fa-award"></i>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- HIDDEN PDF PRINT TEMPLATE - EXACT REPLICA OF THE OFFICIAL SPPG PDF -->
+    <div class="hidden">
+        <div id="pdfRenderTemplate">
+            
+            <!-- HEADER -->
+            <div style="text-align: center; font-weight: bold; font-size: 13px; margin-bottom: 8px; border-bottom: 2px solid #000; padding-bottom: 4px;">
+                CHECKLIST HARIAN KOORDINASI ZOOM & MONITORING SPPG
+            </div>
+
+            <!-- SPPG GENERAL INFO TABLE -->
+            <table>
+                <tr>
+                    <td style="width: 15%; font-weight: bold;">Nama SPPG:</td>
+                    <td style="width: 35%;" id="pdf_nama_sppg">-</td>
+                    <td style="width: 20%; font-weight: bold;">Pengawas Keuangan:</td>
+                    <td style="width: 30%;" id="pdf_pengawas_keuangan">-</td>
+                </tr>
+                <tr>
+                    <td style="font-weight: bold;">Kepala SPPG:</td>
+                    <td id="pdf_kepala_sppg">-</td>
+                    <td style="font-weight: bold;">Pengawas Gizi:</td>
+                    <td id="pdf_pengawas_gizi">-</td>
+                </tr>
+                <tr>
+                    <td style="font-weight: bold;">Tanggal:</td>
+                    <td id="pdf_tanggal">-</td>
+                    <td style="font-weight: bold;">Asisten Lapangan:</td>
+                    <td id="pdf_asisten_lapangan">-</td>
+                </tr>
+                <tr>
+                    <td style="font-weight: bold;">Jam Zoom:</td>
+                    <td id="pdf_jam_zoom">-</td>
+                    <td style="font-weight: bold;">Chef:</td>
+                    <td id="pdf_chef">-</td>
+                </tr>
+            </table>
+
+            <!-- I. DATA UMUM -->
+            <div class="pdf-section-header">I. DATA UMUM</div>
+            
+            <div style="font-weight: bold; margin-bottom: 2px;">1. JUMLAH PENERIMA MANFAAT DAN SERTIFIKASI</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Kategori</th>
+                        <th>PM Terdata (Potensi PM)</th>
+                        <th>PM Yang Dilayani Hari Ini</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Penerima Manfaat Peserta Didik</td>
+                        <td id="pdf_pm_pd_pot">-</td>
+                        <td id="pdf_pm_pd_lay">-</td>
+                    </tr>
+                    <tr>
+                        <td>Penerima Manfaat 3B</td>
+                        <td id="pdf_pm_3b_pot">-</td>
+                        <td id="pdf_pm_3b_lay">-</td>
+                    </tr>
+                    <tr style="font-weight: bold; background: #f1f5f9;">
+                        <td>Total Penerima Manfaat</td>
+                        <td id="pdf_pm_tot_pot">-</td>
+                        <td id="pdf_pm_tot_lay">-</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div style="margin-bottom: 6px; background: #f8fafc; padding: 4px; border: 1px solid #ccc;">
+                <b>Status Sertifikasi:</b><br>
+                Sertifikat SLHS: <span id="pdf_slhs">[ ]</span> | 
+                Sertifikat Halal: <span id="pdf_halal">[ ]</span> | 
+                Sertifikat BNSP Chef: <span id="pdf_bnsp">[ ]</span>
+            </div>
+
+            <div style="font-weight: bold; margin-bottom: 2px;">2. AIR BERSIH</div>
+            <table>
+                <tr>
+                    <td style="width: 50%;">
+                        <b>Sumber air minum:</b> <span id="pdf_air_minum_sumber">-</span><br>
+                        Diambil tgl/jam: <span id="pdf_air_minum_tgl">-</span> | pH: <span id="pdf_air_minum_ph">-</span>
+                    </td>
+                    <td style="width: 50%;">
+                        <b>Sumber air masak:</b> <span id="pdf_air_masak_sumber">-</span><br>
+                        Diambil tgl/jam: <span id="pdf_air_masak_tgl">-</span> | pH: <span id="pdf_air_masak_ph">-</span>
+                    </td>
+                </tr>
+            </table>
+
+            <div style="font-weight: bold; margin-bottom: 2px;">3. KONDISI RUANGAN</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 6%;">Cek</th>
+                        <th style="width: 50%;">Pertanyaan / Parameter</th>
+                        <th style="width: 14%;">Hasil</th>
+                        <th>Keterangan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td text-align="center" id="pdf_r1_c">[ ]</td>
+                        <td>Apakah semua ruangan memiliki termometer yang berfungsi baik?</td>
+                        <td id="pdf_r1_res">-</td>
+                        <td id="pdf_r1_ket">-</td>
+                    </tr>
+                    <tr>
+                        <td text-align="center" id="pdf_r2_c">[ ]</td>
+                        <td>Apakah suhu ruangan sesuai standar (25°C - 30°C)?</td>
+                        <td id="pdf_r2_res">-</td>
+                        <td id="pdf_r2_ket">-</td>
+                    </tr>
+                    <tr>
+                        <td text-align="center" id="pdf_r3_c">[ ]</td>
+                        <td>Apakah ruangan dalam keadaan bersih sesuai standar?</td>
+                        <td id="pdf_r3_res">-</td>
+                        <td id="pdf_r3_ket">-</td>
+                    </tr>
+                    <tr>
+                        <td text-align="center" id="pdf_r4_c">[ ]</td>
+                        <td>Apakah terdapat insect killer berfungsi baik di ruang persiapan/pengolahan/porsi?</td>
+                        <td id="pdf_r4_res">-</td>
+                        <td id="pdf_r4_ket">-</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- II. PENERIMAAN DAN PENYIMPANAN BAHAN BAKU -->
+            <div class="pdf-section-header">II. PENERIMAAN DAN PENYIMPANAN BAHAN BAKU</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 5%;">Cek</th>
+                        <th>Jenis Bahan Baku</th>
+                        <th>Jumlah</th>
+                        <th>Kualitas</th>
+                        <th>Waktu Terima</th>
+                        <th>Penerima</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td id="pdf_bb_1_c">[ ]</td><td>Karbohidrat</td><td id="pdf_bb_1_j">-</td><td id="pdf_bb_1_k">-</td><td id="pdf_bb_1_w">-</td><td id="pdf_bb_1_p">-</td></tr>
+                    <tr><td id="pdf_bb_2_c">[ ]</td><td>Protein Hewani</td><td id="pdf_bb_2_j">-</td><td id="pdf_bb_2_k">-</td><td id="pdf_bb_2_w">-</td><td id="pdf_bb_2_p">-</td></tr>
+                    <tr><td id="pdf_bb_3_c">[ ]</td><td>Protein Nabati</td><td id="pdf_bb_3_j">-</td><td id="pdf_bb_3_k">-</td><td id="pdf_bb_3_w">-</td><td id="pdf_bb_3_p">-</td></tr>
+                    <tr><td id="pdf_bb_4_c">[ ]</td><td>Buah</td><td id="pdf_bb_4_j">-</td><td id="pdf_bb_4_k">-</td><td id="pdf_bb_4_w">-</td><td id="pdf_bb_4_p">-</td></tr>
+                    <tr><td id="pdf_bb_5_c">[ ]</td><td>Sayur</td><td id="pdf_bb_5_j">-</td><td id="pdf_bb_5_k">-</td><td id="pdf_bb_5_w">-</td><td id="pdf_bb_5_p">-</td></tr>
+                </tbody>
+            </table>
+
+            <div style="margin-bottom: 6px;">
+                <b>Suhu Bahan Baku Beku & Storage:</b><br>
+                • Suhu Bahan Beku 1 (<span id="pdf_beku1_n">-</span>): <span id="pdf_beku1_v">-</span> °C (Jam <span id="pdf_beku1_j">-</span>)<br>
+                • Suhu Bahan Beku 2 (<span id="pdf_beku2_n">-</span>): <span id="pdf_beku2_v">-</span> °C (Jam <span id="pdf_beku2_j">-</span>)<br>
+                • Suhu Chiller: <span id="pdf_chiller_v">-</span> °C (Jam <span id="pdf_chiller_j">-</span>) | Suhu Freezer: <span id="pdf_freezer_v">-</span> °C (Jam <span id="pdf_freezer_j">-</span>)
+            </div>
+
+            <!-- III. PERSIAPAN DAN PENGOLAHAN -->
+            <div class="pdf-section-header">III. PERSIAPAN, PENGOLAHAN DAN PENDINGINAN</div>
+            <table>
+                <tr>
+                    <td><b>Higiene Persiapan:</b> Bebas Penyakit: <span id="pdf_hp1">-</span> | APD Lengkap: <span id="pdf_hp2">-</span> | CTPS: <span id="pdf_hp3">-</span></td>
+                </tr>
+                <tr>
+                    <td><b>Pengolahan:</b> Kematangan: <span id="pdf_m_matang">-</span> | Suhu Matang: <span id="pdf_m_suhu">-</span> °C (Jam <span id="pdf_m_jam">-</span>)</td>
+                </tr>
+                <tr>
+                    <td><b>Pendinginan:</b> Ruang Steril: <span id="pdf_d_ruang">-</span> | Suhu Makanan Jadi: <span id="pdf_d_suhu">-</span> °C | Nasi &gt;2 Jam Suhu Ruang: <span id="pdf_d_nasi">-</span></td>
+                </tr>
+            </table>
+
+            <!-- IV. PEMORSIAN DAN DISTRIBUSI -->
+            <div class="pdf-section-header">IV. PEMORSIAN DAN DISTRIBUSI</div>
+            <table>
+                <tr>
+                    <td><b>Pemorsian:</b> Standar Gizi/URT: <span id="pdf_p_urt">-</span> | Suhu Pemorsian: <span id="pdf_p_suhu">-</span> °C | 2 Sampel Disimpan: <span id="pdf_p_sampel">-</span></td>
+                </tr>
+                <tr>
+                    <td><b>QC Organoleptik:</b> Oleh <span id="pdf_qc_o">-</span> Jam <span id="pdf_qc_j">-</span> dengan hasil: <span id="pdf_qc_h">-</span></td>
+                </tr>
+                <tr>
+                    <td><b>Detail Sisa Makanan (kg):</b> Karbo: <span id="pdf_s_k">0</span>, Prohe: <span id="pdf_s_ph">0</span>, Prona: <span id="pdf_s_pn">0</span>, Sayur: <span id="pdf_s_s">0</span>, Buah: <span id="pdf_s_b">0</span></td>
+                </tr>
+                <tr>
+                    <td><b>Distribusi:</b> Selesai Masak: <span id="pdf_dis_m">-</span> | Berangkat: <span id="pdf_dis_b">-</span> | Sampai: <span id="pdf_dis_t">-</span> | Konsumsi: <span id="pdf_dis_k">-</span> | Suhu Panas Dibagi: <span id="pdf_dis_sp">-</span> °C</td>
+                </tr>
+            </table>
+
+            <!-- V. TEMUAN DAN KEPUTUSAN -->
+            <div class="pdf-section-header">V. TEMUAN & KEPUTUSAN FINAL</div>
+            <div style="border: 1px solid #333; padding: 6px; margin-bottom: 8px;">
+                <b>Catatan Temuan:</b> <span id="pdf_temuan_catatan">Tidak ada temuan khusus.</span>
+            </div>
+
+            <div style="border: 2px solid #000; padding: 8px; background-color: #f1f5f9; font-weight: bold; font-size: 11px;">
+                KEPUTUSAN FINAL: <span id="pdf_keputusan_final" style="color: #0B2545;">-</span>
+            </div>
+
+            <div style="margin-top: 12px; font-size: 8px; text-align: center; color: #555;">
+                KONTAK DARURAT: PSC 119 | WA: +62 8777 7591097 | Email: pheoc.indonesia@kemkes.go.id<br>
+                <i>Dokumen ini di-generate secara digital melalui Aplikasi SPPG Digital Monitoring MBG.</i>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT APP LOGIC -->
+    <script>
+        // Key LocalStorage Database
+        const STORAGE_KEY = 'SPPG_MONITORING_DATABASE_V1';
+
+        // Set default date on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('tanggal_audit').value = today;
+            renderHistoryTable();
+            updateAnalytics();
+        });
+
+        // Tab Navigation Logic
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
+            document.getElementById(tabId).classList.remove('hidden');
+            document.getElementById(`nav-${tabId}`).classList.add('active');
+
+            if(tabId === 'history-tab') {
+                renderHistoryTable();
+            } else if (tabId === 'analytics-tab') {
+                updateAnalytics();
+            }
+        }
+
+        // Auto-calculate PM Total
+        function calculatePMTotal() {
+            const pdPot = parseInt(document.getElementById('pm_pd_potensi').value) || 0;
+            const pdLay = parseInt(document.getElementById('pm_pd_dilayani').value) || 0;
+            const b3Pot = parseInt(document.getElementById('pm_3b_potensi').value) || 0;
+            const b3Lay = parseInt(document.getElementById('pm_3b_dilayani').value) || 0;
+
+            document.getElementById('pm_total_potensi').innerText = (pdPot + b3Pot).toLocaleString();
+            document.getElementById('pm_total_dilayani').innerText = (pdLay + b3Lay).toLocaleString();
+        }
+
+        // Collect Form Data into Object
+        function getFormData() {
+            const getRadioVal = (name) => {
+                const checked = document.querySelector(`input[name="${name}"]:checked`);
+                return checked ? checked.value : '-';
+            };
+
+            const getChk = (id) => document.getElementById(id)?.checked ? '✔' : '✘';
+
+            return {
+                id: 'SPPG-' + Date.now(),
+                timestamp: new Date().toISOString(),
+                nama_sppg: document.getElementById('nama_sppg').value || 'SPPG Pusat',
+                kepala_sppg: document.getElementById('kepala_sppg').value || '-',
+                pengawas_keuangan: document.getElementById('pengawas_keuangan').value || '-',
+                pengawas_gizi: document.getElementById('pengawas_gizi').value || '-',
+                tanggal: document.getElementById('tanggal_audit').value || new Date().toISOString().split('T')[0],
+                jam_zoom: document.getElementById('jam_zoom').value || '-',
+                asisten_lapangan: document.getElementById('asisten_lapangan').value || '-',
+                chef: document.getElementById('chef_nama').value || '-',
+                
+                // PM Data
+                pm_pd_pot: document.getElementById('pm_pd_potensi').value || 0,
+                pm_pd_lay: document.getElementById('pm_pd_dilayani').value || 0,
+                pm_3b_pot: document.getElementById('pm_3b_potensi').value || 0,
+                pm_3b_lay: document.getElementById('pm_3b_dilayani').value || 0,
+                pm_tot_pot: document.getElementById('pm_total_potensi').innerText,
+                pm_tot_lay: document.getElementById('pm_total_dilayani').innerText,
+
+                // Certifications
+                cert_slhs: getRadioVal('cert_slhs'),
+                cert_halal: getRadioVal('cert_halal'),
+                cert_bnsp: getRadioVal('cert_bnsp'),
+
+                // Water
+                air_minum_sumber: document.getElementById('air_minum_sumber').value,
+                air_minum_tgl: document.getElementById('air_minum_tgl').value || '-',
+                air_minum_ph: document.getElementById('air_minum_ph').value || 'NA',
+                air_masak_sumber: document.getElementById('air_masak_sumber').value,
+                air_masak_tgl: document.getElementById('air_masak_tgl').value || '-',
+                air_masak_ph: document.getElementById('air_masak_ph').value || 'NA',
+
+                // Room
+                ruang_1_c: getChk('ruang_1_chk'), ruang_1_res: document.getElementById('ruang_1_res').value, ruang_1_ket: document.getElementById('ruang_1_ket').value || '-',
+                ruang_2_c: getChk('ruang_2_chk'), ruang_2_res: document.getElementById('ruang_2_res').value, ruang_2_ket: document.getElementById('ruang_2_ket').value || '-',
+                ruang_3_c: getChk('ruang_3_chk'), ruang_3_res: document.getElementById('ruang_3_res').value, ruang_3_ket: document.getElementById('ruang_3_ket').value || '-',
+                ruang_4_c: getChk('ruang_4_chk'), ruang_4_res: document.getElementById('ruang_4_res').value, ruang_4_ket: document.getElementById('ruang_4_ket').value || '-',
+
+                // Raw materials
+                bb_karbo_c: getChk('bb_karbo_chk'), bb_karbo_j: document.getElementById('bb_karbo_jml').value, bb_karbo_k: document.getElementById('bb_karbo_kual').value, bb_karbo_w: document.getElementById('bb_karbo_jam').value || '-', bb_karbo_p: document.getElementById('bb_karbo_penerima').value || '-',
+                bb_prohe_c: getChk('bb_prohe_chk'), bb_prohe_j: document.getElementById('bb_prohe_jml').value, bb_prohe_k: document.getElementById('bb_prohe_kual').value, bb_prohe_w: document.getElementById('bb_prohe_jam').value || '-', bb_prohe_p: document.getElementById('bb_prohe_penerima').value || '-',
+                bb_prona_c: getChk('bb_prona_chk'), bb_prona_j: document.getElementById('bb_prona_jml').value, bb_prona_k: document.getElementById('bb_prona_kual').value, bb_prona_w: document.getElementById('bb_prona_jam').value || '-', bb_prona_p: document.getElementById('bb_prona_penerima').value || '-',
+                bb_buah_c: getChk('bb_buah_chk'), bb_buah_j: document.getElementById('bb_buah_jml').value, bb_buah_k: document.getElementById('bb_buah_kual').value, bb_buah_w: document.getElementById('bb_buah_jam').value || '-', bb_buah_p: document.getElementById('bb_buah_penerima').value || '-',
+                bb_sayur_c: getChk('bb_sayur_chk'), bb_sayur_j: document.getElementById('bb_sayur_jml').value, bb_sayur_k: document.getElementById('bb_sayur_kual').value, bb_sayur_w: document.getElementById('bb_sayur_jam').value || '-', bb_sayur_p: document.getElementById('bb_sayur_penerima').value || '-',
+
+                // Raw temp
+                beku1_nama: document.getElementById('suhu_beku1_nama').value || '-', beku1_val: document.getElementById('suhu_beku1_val').value || '-', beku1_jam: document.getElementById('suhu_beku1_jam').value || '-',
+                beku2_nama: document.getElementById('suhu_beku2_nama').value || '-', beku2_val: document.getElementById('suhu_beku2_val').value || '-', beku2_jam: document.getElementById('suhu_beku2_jam').value || '-',
+                chiller_val: document.getElementById('suhu_chiller_val').value || '-', chiller_jam: document.getElementById('suhu_chiller_jam').value || '-',
+                freezer_val: document.getElementById('suhu_freezer_val').value || '-', freezer_jam: document.getElementById('suhu_freezer_jam').value || '-',
+
+                // Hygiene & Cook
+                higiene_p1: document.getElementById('higiene_p_1_res').value,
+                higiene_p2: document.getElementById('higiene_p_2_res').value,
+                higiene_p3: document.getElementById('higiene_p_3_res').value,
+                masak_matang: document.getElementById('masak_matang').value,
+                masak_suhu: document.getElementById('masak_suhu').value || '-',
+                masak_jam: document.getElementById('masak_jam').value || '-',
+                dingin_ruang: document.getElementById('dingin_ruang').value,
+                dingin_suhu: document.getElementById('dingin_suhu').value || '-',
+                dingin_nasi: document.getElementById('dingin_nasi').value,
+
+                // Porsi & QC
+                porsi_urt: document.getElementById('porsi_urt').value,
+                porsi_suhu: document.getElementById('porsi_suhu').value || '-',
+                porsi_sampel: document.getElementById('porsi_sampel').value,
+                qc_oleh: document.getElementById('qc_oleh').value || '-',
+                qc_jam: document.getElementById('qc_jam').value || '-',
+                qc_hasil: document.getElementById('qc_hasil').value || '-',
+                sisa_k: document.getElementById('sisa_karbo').value || '0',
+                sisa_ph: document.getElementById('sisa_prohe').value || '0',
+                sisa_pn: document.getElementById('sisa_prona').value || '0',
+                sisa_s: document.getElementById('sisa_sayur').value || '0',
+                sisa_b: document.getElementById('sisa_buah').value || '0',
+
+                // Distribusi
+                dist_m: document.getElementById('dist_jam_masak').value || '-',
+                dist_b: document.getElementById('dist_jam_berangkat').value || '-',
+                dist_t: document.getElementById('dist_jam_tiba').value || '-',
+                dist_k: document.getElementById('dist_jam_konsumsi').value || '-',
+                dist_sp: document.getElementById('dist_suhu_panas').value || '-',
+
+                // Final
+                temuan: document.getElementById('temuan_catatan').value || 'Tidak Ada Temuan Khusus',
+                keputusan: getRadioVal('keputusan_final')
+            };
+        }
+
+        // Save data into LocalStorage Database
+        function saveToDatabase(formData) {
+            let dataList = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            dataList.unshift(formData); // newest first
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(dataList));
+        }
+
+        // Handle Submit Form
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const formData = getFormData();
+            saveToDatabase(formData);
+            showNotification('Berhasil!', 'Data checklist SPPG telah tersimpan ke database.', 'success');
+            switchTab('history-tab');
+        }
+
+        // Save & Download PDF Official Form
+        function saveAndDownloadPDF() {
+            const formData = getFormData();
+            saveToDatabase(formData);
+            populatePDFTemplate(formData);
+
+            const element = document.getElementById('pdfRenderTemplate');
+            const opt = {
+                margin:       [8, 8, 8, 8],
+                filename:     `Checklist_SPPG_${formData.nama_sppg.replace(/\s+/g, '_')}_${formData.tanggal}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                showNotification('Unduhan Dimulai!', 'Berkas PDF Checklist SPPG resmi berhasil dibuat.', 'success');
+            });
+        }
+
+        // Populate PDF hidden HTML template with data
+        function populatePDFTemplate(d) {
+            document.getElementById('pdf_nama_sppg').innerText = d.nama_sppg;
+            document.getElementById('pdf_kepala_sppg').innerText = d.kepala_sppg;
+            document.getElementById('pdf_pengawas_keuangan').innerText = d.pengawas_keuangan;
+            document.getElementById('pdf_pengawas_gizi').innerText = d.pengawas_gizi;
+            document.getElementById('pdf_tanggal').innerText = d.tanggal;
+            document.getElementById('pdf_asisten_lapangan').innerText = d.asisten_lapangan;
+            document.getElementById('pdf_jam_zoom').innerText = d.jam_zoom;
+            document.getElementById('pdf_chef').innerText = d.chef;
+
+            document.getElementById('pdf_pm_pd_pot').innerText = d.pm_pd_pot;
+            document.getElementById('pdf_pm_pd_lay').innerText = d.pm_pd_lay;
+            document.getElementById('pdf_pm_3b_pot').innerText = d.pm_3b_pot;
+            document.getElementById('pdf_pm_3b_lay').innerText = d.pm_3b_lay;
+            document.getElementById('pdf_pm_tot_pot').innerText = d.pm_tot_pot;
+            document.getElementById('pdf_pm_tot_lay').innerText = d.pm_tot_lay;
+
+            document.getElementById('pdf_slhs').innerText = d.cert_slhs;
+            document.getElementById('pdf_halal').innerText = d.cert_halal;
+            document.getElementById('pdf_bnsp').innerText = d.cert_bnsp;
+
+            document.getElementById('pdf_air_minum_sumber').innerText = d.air_minum_sumber;
+            document.getElementById('pdf_air_minum_tgl').innerText = d.air_minum_tgl;
+            document.getElementById('pdf_air_minum_ph').innerText = d.air_minum_ph;
+            document.getElementById('pdf_air_masak_sumber').innerText = d.air_masak_sumber;
+            document.getElementById('pdf_air_masak_tgl').innerText = d.air_masak_tgl;
+            document.getElementById('pdf_air_masak_ph').innerText = d.air_masak_ph;
+
+            document.getElementById('pdf_r1_c').innerText = d.ruang_1_c; document.getElementById('pdf_r1_res').innerText = d.ruang_1_res; document.getElementById('pdf_r1_ket').innerText = d.ruang_1_ket;
+            document.getElementById('pdf_r2_c').innerText = d.ruang_2_c; document.getElementById('pdf_r2_res').innerText = d.ruang_2_res; document.getElementById('pdf_r2_ket').innerText = d.ruang_2_ket;
+            document.getElementById('pdf_r3_c').innerText = d.ruang_3_c; document.getElementById('pdf_r3_res').innerText = d.ruang_3_res; document.getElementById('pdf_r3_ket').innerText = d.ruang_3_ket;
+            document.getElementById('pdf_r4_c').innerText = d.ruang_4_c; document.getElementById('pdf_r4_res').innerText = d.ruang_4_res; document.getElementById('pdf_r4_ket').innerText = d.ruang_4_ket;
+
+            document.getElementById('pdf_bb_1_c').innerText = d.bb_karbo_c; document.getElementById('pdf_bb_1_j').innerText = d.bb_karbo_j; document.getElementById('pdf_bb_1_k').innerText = d.bb_karbo_k; document.getElementById('pdf_bb_1_w').innerText = d.bb_karbo_w; document.getElementById('pdf_bb_1_p').innerText = d.bb_karbo_p;
+            document.getElementById('pdf_bb_2_c').innerText = d.bb_prohe_c; document.getElementById('pdf_bb_2_j').innerText = d.bb_prohe_j; document.getElementById('pdf_bb_2_k').innerText = d.bb_prohe_k; document.getElementById('pdf_bb_2_w').innerText = d.bb_prohe_w; document.getElementById('pdf_bb_2_p').innerText = d.bb_prohe_p;
+            document.getElementById('pdf_bb_3_c').innerText = d.bb_prona_c; document.getElementById('pdf_bb_3_j').innerText = d.bb_prona_j; document.getElementById('pdf_bb_3_k').innerText = d.bb_prona_k; document.getElementById('pdf_bb_3_w').innerText = d.bb_prona_w; document.getElementById('pdf_bb_3_p').innerText = d.bb_prona_p;
+            document.getElementById('pdf_bb_4_c').innerText = d.bb_buah_c; document.getElementById('pdf_bb_4_j').innerText = d.bb_buah_j; document.getElementById('pdf_bb_4_k').innerText = d.bb_buah_k; document.getElementById('pdf_bb_4_w').innerText = d.bb_buah_w; document.getElementById('pdf_bb_4_p').innerText = d.bb_buah_p;
+            document.getElementById('pdf_bb_5_c').innerText = d.bb_sayur_c; document.getElementById('pdf_bb_5_j').innerText = d.bb_sayur_j; document.getElementById('pdf_bb_5_k').innerText = d.bb_sayur_k; document.getElementById('pdf_bb_5_w').innerText = d.bb_sayur_w; document.getElementById('pdf_bb_5_p').innerText = d.bb_sayur_p;
+
+            document.getElementById('pdf_beku1_n').innerText = d.beku1_nama; document.getElementById('pdf_beku1_v').innerText = d.beku1_val; document.getElementById('pdf_beku1_j').innerText = d.beku1_jam;
+            document.getElementById('pdf_beku2_n').innerText = d.beku2_nama; document.getElementById('pdf_beku2_v').innerText = d.beku2_val; document.getElementById('pdf_beku2_j').innerText = d.beku2_jam;
+            document.getElementById('pdf_chiller_v').innerText = d.chiller_val; document.getElementById('pdf_chiller_j').innerText = d.chiller_jam;
+            document.getElementById('pdf_freezer_v').innerText = d.freezer_val; document.getElementById('pdf_freezer_j').innerText = d.freezer_jam;
+
+            document.getElementById('pdf_hp1').innerText = d.higiene_p1; document.getElementById('pdf_hp2').innerText = d.higiene_p2; document.getElementById('pdf_hp3').innerText = d.higiene_p3;
+            document.getElementById('pdf_m_matang').innerText = d.masak_matang; document.getElementById('pdf_m_suhu').innerText = d.masak_suhu; document.getElementById('pdf_m_jam').innerText = d.masak_jam;
+            document.getElementById('pdf_d_ruang').innerText = d.dingin_ruang; document.getElementById('pdf_d_suhu').innerText = d.dingin_suhu; document.getElementById('pdf_d_nasi').innerText = d.dingin_nasi;
+
+            document.getElementById('pdf_p_urt').innerText = d.porsi_urt; document.getElementById('pdf_p_suhu').innerText = d.porsi_suhu; document.getElementById('pdf_p_sampel').innerText = d.porsi_sampel;
+            document.getElementById('pdf_qc_o').innerText = d.qc_oleh; document.getElementById('pdf_qc_j').innerText = d.qc_jam; document.getElementById('pdf_qc_h').innerText = d.qc_hasil;
+            document.getElementById('pdf_s_k').innerText = d.sisa_k; document.getElementById('pdf_s_ph').innerText = d.sisa_ph; document.getElementById('pdf_s_pn').innerText = d.sisa_pn; document.getElementById('pdf_s_s').innerText = d.sisa_s; document.getElementById('pdf_s_b').innerText = d.sisa_b;
+
+            document.getElementById('pdf_dis_m').innerText = d.dist_m; document.getElementById('pdf_dis_b').innerText = d.dist_b; document.getElementById('pdf_dis_t').innerText = d.dist_t; document.getElementById('pdf_dis_k').innerText = d.dist_k; document.getElementById('pdf_dis_sp').innerText = d.dist_sp;
+
+            document.getElementById('pdf_temuan_catatan').innerText = d.temuan;
+            document.getElementById('pdf_keputusan_final').innerText = d.keputusan;
+        }
+
+        // Render Database History Table
+        function renderHistoryTable(filteredData = null) {
+            const dataList = filteredData || JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            const tbody = document.getElementById('historyTableBody');
+            document.getElementById('recordCount').innerText = dataList.length;
+
+            if(dataList.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="p-8 text-center text-slate-400">
+                            <i class="fa-solid fa-folder-open text-4xl mb-2 block"></i>
+                            Belum ada riwayat audit tersimpan.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = dataList.map(item => {
+                let badgeClass = 'bg-emerald-100 text-emerald-800';
+                if(item.keputusan.includes('catatan')) badgeClass = 'bg-amber-100 text-amber-800';
+                if(item.keputusan.includes('NO-GO')) badgeClass = 'bg-rose-100 text-rose-800';
+
+                return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-3 font-semibold text-slate-700">${item.tanggal}</td>
+                        <td class="p-3 font-bold text-navy-800">${item.nama_sppg}</td>
+                        <td class="p-3">${item.kepala_sppg}</td>
+                        <td class="p-3 font-medium text-emerald-700">${item.pm_tot_lay} Orang</td>
+                        <td class="p-3">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold ${badgeClass}">
+                                ${item.keputusan.split('-')[0]}
+                            </span>
+                        </td>
+                        <td class="p-3 text-center">
+                            <button onclick="downloadSinglePDF('${item.id}')" title="Unduh PDF" class="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg text-xs font-bold mr-1">
+                                <i class="fa-solid fa-file-pdf"></i>
+                            </button>
+                            <button onclick="deleteSingleRecord('${item.id}')" title="Hapus Data" class="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs font-bold">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Apply Date Range Filter
+        function applyDateFilter() {
+            const start = document.getElementById('filter_start').value;
+            const end = document.getElementById('filter_end').value;
+            const dataList = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+
+            if(!start && !end) {
+                renderHistoryTable(dataList);
+                return;
+            }
+
+            const filtered = dataList.filter(item => {
+                const itemDate = item.tanggal;
+                if(start && itemDate < start) return false;
+                if(end && itemDate > end) return false;
+                return true;
+            });
+
+            renderHistoryTable(filtered);
+        }
+
+        function resetDateFilter() {
+            document.getElementById('filter_start').value = '';
+            document.getElementById('filter_end').value = '';
+            renderHistoryTable();
+        }
+
+        // Download PDF for specific item
+        function downloadSinglePDF(id) {
+            const dataList = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            const item = dataList.find(d => d.id === id);
+            if(item) {
+                populatePDFTemplate(item);
+                const element = document.getElementById('pdfRenderTemplate');
+                const opt = {
+                    margin:       [8, 8, 8, 8],
+                    filename:     `Checklist_SPPG_${item.nama_sppg.replace(/\s+/g, '_')}_${item.tanggal}.pdf`,
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { scale: 2, useCORS: true },
+                    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+                html2pdf().set(opt).from(element).save();
+            }
+        }
+
+        // Export All to CSV
+        function exportToCSV() {
+            const dataList = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            if(dataList.length === 0) {
+                showNotification('Kosong!', 'Tidak ada data untuk diekspor.', 'warning');
+                return;
+            }
+
+            let csv = 'Tanggal,Nama SPPG,Kepala SPPG,PM Dilayani,Keputusan Final,Temuan\n';
+            dataList.forEach(row => {
+                csv += `"${row.tanggal}","${row.nama_sppg}","${row.kepala_sppg}","${row.pm_tot_lay}","${row.keputusan}","${row.temuan.replace(/"/g, '""')}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Rekap_Database_SPPG_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Update Analytics Dashboard
+        function updateAnalytics() {
+            const dataList = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            const total = dataList.length;
+            const go = dataList.filter(d => d.keputusan.startsWith('GO-')).length;
+            const catatan = dataList.filter(d => d.keputusan.includes('catatan')).length;
+            const nogo = dataList.filter(d => d.keputusan.includes('NO-GO')).length;
+
+            document.getElementById('stat_total').innerText = total;
+            document.getElementById('stat_go').innerText = go;
+            document.getElementById('stat_catatan').innerText = catatan;
+            document.getElementById('stat_nogo').innerText = nogo;
+
+            const goPct = total > 0 ? Math.round((go / total) * 100) : 0;
+            document.getElementById('stat_go_pct').innerText = `${goPct}% Tingkat Kelulusan`;
+        }
+
+        // Delete Single Record
+        function deleteSingleRecord(id) {
+            let dataList = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            dataList = dataList.filter(item => item.id !== id);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(dataList));
+            renderHistoryTable();
+            updateAnalytics();
+            showNotification('Dihapus', 'Satu rekap laporan telah dihapus.', 'info');
+        }
+
+        function clearAllDataConfirm() {
+            if(confirm('Apakah Anda yakin ingin menghapus SEMUA riwayat database SPPG?')) {
+                localStorage.removeItem(STORAGE_KEY);
+                renderHistoryTable();
+                updateAnalytics();
+                showNotification('Database Direset', 'Seluruh data telah dihapus.', 'info');
+            }
+        }
+
+        function resetFormWithConfirm() {
+            if(confirm('Reset seluruh isian form?')) {
+                document.getElementById('sppgForm').reset();
+                calculatePMTotal();
+            }
+        }
+
+        // Autofill sample dummy data for fast testing
+        function autoFillSampleData() {
+            document.getElementById('nama_sppg').value = 'SPPG Bandung Kidul #04';
+            document.getElementById('kepala_sppg').value = 'Drs. Ahmad Hidayat';
+            document.getElementById('pengawas_keuangan').value = 'Siti Nurhaliza, S.E.';
+            document.getElementById('pengawas_gizi').value = 'Rita Sugiharto, S.Gz.';
+            document.getElementById('asisten_lapangan').value = 'Budi Santoso';
+            document.getElementById('chef_nama').value = 'Chef Hendra';
+            document.getElementById('jam_zoom').value = '06:30';
+
+            document.getElementById('pm_pd_potensi').value = 450;
+            document.getElementById('pm_pd_dilayani').value = 442;
+            document.getElementById('pm_3b_potensi').value = 35;
+            document.getElementById('pm_3b_dilayani').value = 35;
+            calculatePMTotal();
+
+            document.getElementById('air_minum_ph').value = '7.2';
+            document.getElementById('air_masak_ph').value = '7.0';
+
+            document.getElementById('suhu_beku1_nama').value = 'Daging Ayam';
+            document.getElementById('suhu_beku1_val').value = -19.5;
+            document.getElementById('suhu_beku1_jam').value = '05:15';
+
+            document.getElementById('suhu_chiller_val').value = 3.8;
+            document.getElementById('suhu_chiller_jam').value = '06:00';
+            document.getElementById('suhu_freezer_val').value = -20.1;
+            document.getElementById('suhu_freezer_jam').value = '06:00';
+
+            document.getElementById('masak_suhu').value = 88;
+            document.getElementById('masak_jam').value = '08:30';
+            document.getElementById('dingin_suhu').value = 65;
+
+            document.getElementById('porsi_suhu').value = 62;
+            document.getElementById('qc_oleh').value = 'Rita Sugiharto';
+            document.getElementById('qc_jam').value = '09:00';
+            document.getElementById('qc_hasil').value = 'Aman, Organoleptik Baik';
+
+            document.getElementById('dist_jam_masak').value = '08:30';
+            document.getElementById('dist_jam_berangkat').value = '09:15';
+            document.getElementById('dist_jam_tiba').value = '09:40';
+            document.getElementById('dist_jam_konsumsi').value = '10:00';
+            document.getElementById('dist_suhu_panas').value = 61;
+
+            document.getElementById('temuan_catatan').value = 'Seluruh proses sanitasi berjalan dengan sangat baik sesuai SOP Kemenkes MBG.';
+
+            showNotification('Contoh Data Diisi!', 'Formulir telah diisi dengan sampel data yang valid.', 'info');
+        }
+
+        // Custom Notification Box (No alert standard)
+        function showNotification(title, text, type = 'info') {
+            const toast = document.createElement('div');
+            let bg = 'bg-navy-800 text-white border-emerald-500';
+            if(type === 'success') bg = 'bg-emerald-600 text-white border-emerald-400';
+            if(type === 'warning') bg = 'bg-amber-600 text-white border-amber-400';
+            if(type === 'info') bg = 'bg-navy-800 text-white border-gold-400';
+
+            toast.className = `fixed bottom-5 right-5 z-50 p-4 rounded-xl shadow-2xl border-l-4 ${bg} transition transform duration-300 translate-y-10 opacity-0 flex items-start space-x-3 max-w-sm`;
+            toast.innerHTML = `
+                <div>
+                    <h4 class="font-bold text-sm">${title}</h4>
+                    <p class="text-xs text-slate-100 mt-0.5">${text}</p>
+                </div>
+            `;
+
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            }, 50);
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+    </script>
+</body>
+</html>
