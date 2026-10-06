@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feeding Manual - Dairy Farm System</title>
+    
+    <link class="pwa-meta" rel="manifest" href="manifest.json?v=24">
+    <meta name="theme-color" content="#030712">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link class="pwa-meta" rel="apple-touch-icon" href="icons/icon-512.png">
+
+    <!-- Font Plus Jakarta Sans (Sama dengan Portal Utama) -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Library PDF (untuk report sisa stok & rapor helper) -->
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --bg-dark: #030712;
+            --card-bg: rgba(15, 23, 42, 0.75);
+            --card-border: rgba(255, 255, 255, 0.12);
+        }
+
+        body { 
+            background-color: var(--bg-dark); 
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: #f8fafc;
+        }
+
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
+        .custom-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+
+        /* ========================================================
+           EFEK ELECTRIC GLOW & SHIMMER MODERN (TEMA PORTAL GELAP)
+        ======================================================== */
+        @keyframes electric-glow {
+            0%, 100% {
+                border-color: rgba(225, 29, 72, 0.35);
+                box-shadow: 0 0 8px rgba(225, 29, 72, 0.15), inset 0 0 2px rgba(225, 29, 72, 0.1);
+            }
+            50% {
+                border-color: rgba(251, 113, 133, 0.65);
+                box-shadow: 0 0 16px rgba(225, 29, 72, 0.35), inset 0 0 4px rgba(225, 29, 72, 0.15);
+            }
+        }
+
+        .electric-box {
+            position: relative;
+            border: 1px solid rgba(225, 29, 72, 0.35);
+            animation: electric-glow 3.5s infinite ease-in-out;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .electric-box:focus-within, .electric-box-focus:focus {
+            animation: none !important;
+            border-color: #fb7185 !important;
+            box-shadow: 0 0 18px rgba(225, 29, 72, 0.5), inset 0 0 6px rgba(225, 29, 72, 0.2) !important;
+            transform: scale(1.005);
+        }
+
+        .electric-box::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -60%;
+            width: 35%; height: 100%;
+            background: linear-gradient(to right, transparent, rgba(251, 113, 133, 0.12), transparent);
+            transform: skewX(-20deg);
+            animation: lightning-pass 5s infinite linear;
+            pointer-events: none;
+        }
+
+        @keyframes lightning-pass {
+            0% { left: -60%; }
+            100% { left: 160%; }
+        }
+
+        /* Ornaments Glow in Background */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: 0;
+            opacity: 0.25;
+            pointer-events: none;
+        }
+        .orb-1 { width: 350px; height: 350px; background: #be123c; top: -100px; left: -100px; }
+        .orb-2 { width: 300px; height: 300px; background: #e11d48; bottom: -80px; right: -80px; }
+    </style>
+</head>
+<body class="font-sans text-slate-100 min-h-screen flex justify-center items-start sm:py-6 relative overflow-x-hidden">
+
+    <!-- Ornamen Background Sync dengan Menu Utama -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
+    <!-- MAIN CONTAINER CARD WITH GLASSMORPHISM -->
+    <div class="w-full max-w-md bg-[#0f172a]/80 backdrop-blur-xl min-h-screen sm:min-h-[850px] sm:rounded-3xl shadow-2xl p-5 flex flex-col justify-between border border-white/10 relative z-10">
+        
+        <div class="space-y-4 flex-1">
+            <!-- Header App -->
+            <div class="text-center py-2">
+                <img src="assets/logo.jpg" alt="Feeding Manual Logo" class="w-16 h-auto mx-auto mb-2 drop-shadow-[0_0_15px_rgba(225,29,72,0.4)]">
+                <h1 class="text-2xl font-extrabold tracking-tight text-white">FEEDING <span class="text-rose-500">MANUAL</span></h1>
+                <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold mt-0.5">Dairy Farm Feeding System</p>
+            </div>
+
+            <!-- Akses cepat: Sisa Stok & Rapor -->
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="bukaModalSisa()" class="bg-slate-900/90 border border-rose-500/30 hover:border-rose-400/60 text-white font-bold text-xs py-2.5 rounded-xl transition active:scale-[0.98]">
+                    Sisa Stok Bahan Kering
+                </button>
+                <button onclick="bukaModalRapor()" class="bg-slate-900/90 border border-rose-500/30 hover:border-rose-400/60 text-white font-bold text-xs py-2.5 rounded-xl transition active:scale-[0.98]">
+                    Rapor Helper
+                </button>
+            </div>
+
+            <!-- Selection: Operator & Shift -->
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[10px] font-bold text-rose-400 uppercase mb-1.5 tracking-wider">Operator</label>
+                    <select id="operator" class="electric-box-focus w-full bg-slate-900/90 border border-slate-700/60 rounded-xl p-3 text-white font-semibold text-xs focus:outline-none transition duration-300">
+                        <option value="" disabled selected>MEMUAT OPERATOR...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-rose-400 uppercase mb-1.5 tracking-wider">Shift Kerja</label>
+                    <select id="shift" onchange="resetSelectionAndRender()" class="electric-box-focus w-full bg-slate-900/90 border border-slate-700/60 rounded-xl p-3 text-white font-semibold text-xs focus:outline-none transition duration-300">
+                        <option value="PAGI">PAGI</option>
+                        <option value="SIANG">SIANG</option>
+                        <option value="MALAM">MALAM</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Selection: Pen / Kandang -->
+            <div>
+                <div class="flex justify-between items-center mb-1.5">
+                    <label class="text-[10px] font-bold text-rose-400 uppercase tracking-wider">Pilih Pen / Kandang (Maks 4)</label>
+                    <span id="pen-counter" class="text-[10px] bg-rose-600 text-white font-extrabold px-2 py-0.5 rounded-full shadow">0/4</span>
+                </div>
+                
+                <div id="container-pen" class="electric-box bg-slate-950/60 rounded-xl p-2 max-h-[220px] overflow-y-auto custom-scroll space-y-1.5">
+                    <div class="text-center py-6 text-xs text-slate-500 italic">Memuat daftar pen...</div>
+                </div>
+            </div>
+
+            <!-- Zonasi Akumulasi Bahan Kering -->
+            <div class="space-y-3 pt-1">
+                <label class="block text-[10px] font-bold text-rose-400 uppercase tracking-wider pl-1">Zonasi Akumulasi Bahan Kering</label>
+                <div id="container-bahan" class="space-y-3">
+                    <p class="text-xs text-slate-500 italic text-center py-6">Pilih minimal satu pen di atas untuk memuat target pakan.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="pt-4 mt-2 border-t border-white/10">
+            <button id="btn-submit" onclick="kirimTimbangan()" class="w-full bg-gradient-to-r from-rose-600 to-be123c hover:from-rose-500 hover:to-rose-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-rose-900/30 transition uppercase tracking-wider text-xs active:scale-[0.99] flex justify-center items-center gap-2">
+                Simpan & Kirim Timbangan
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: SISA STOK BAHAN KERING -->
+    <div id="modal-sisa" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center" onclick="if(event.target===this) tutupModal('modal-sisa')">
+        <div class="w-full max-w-md bg-[#0f172a] border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 max-h-[88vh] flex flex-col shadow-2xl">
+            <div class="flex justify-between items-start mb-3">
+                <div>
+                    <h2 class="text-base font-extrabold text-white">Sisa Stok Bahan Kering</h2>
+                    <p id="sisa-updated" class="text-[10px] text-slate-400 mt-0.5">Memuat data...</p>
+                </div>
+                <button onclick="tutupModal('modal-sisa')" class="text-slate-400 hover:text-white text-xl leading-none px-2" aria-label="Tutup">&times;</button>
+            </div>
+
+            <div id="sisa-list" class="flex-1 overflow-y-auto custom-scroll space-y-1.5 pr-1 min-h-[120px]"></div>
+
+            <div class="grid grid-cols-2 gap-3 pt-4 mt-3 border-t border-white/10">
+                <button onclick="muatUlangSisaModal()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs py-3 rounded-xl transition">Perbarui data</button>
+                <button id="btn-pdf-sisa" onclick="unduhPdfSisa()" class="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs py-3 rounded-xl transition">Unduh PDF</button>
+            </div>
+            <p class="text-[10px] text-slate-500 mt-2 text-center">PDF berisi kolom kosong "Stock Fisik" untuk dicek dan diisi helper.</p>
+        </div>
+    </div>
+
+    <!-- MODAL: RAPOR HELPER -->
+    <div id="modal-rapor" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center" onclick="if(event.target===this) tutupModal('modal-rapor')">
+        <div class="w-full max-w-md bg-[#0f172a] border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 max-h-[90vh] flex flex-col shadow-2xl">
+            <div class="flex justify-between items-start mb-3">
+                <div>
+                    <h2 class="text-base font-extrabold text-white">Rapor Helper</h2>
+                    <p class="text-[10px] text-slate-400 mt-0.5">Akurasi timbangan aktual terhadap target formula</p>
+                </div>
+                <button onclick="tutupModal('modal-rapor')" class="text-slate-400 hover:text-white text-xl leading-none px-2" aria-label="Tutup">&times;</button>
+            </div>
+
+            <div class="space-y-3 overflow-y-auto custom-scroll pr-1 flex-1">
+                <div>
+                    <label class="block text-[10px] font-bold text-rose-400 mb-1.5 tracking-wider">Helper</label>
+                    <select id="rapor-helper" class="w-full bg-slate-900/90 border border-slate-700/60 rounded-xl p-3 text-white font-semibold text-xs focus:outline-none"></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-rose-400 mb-1.5 tracking-wider">Periode</label>
+                    <select id="rapor-preset" onchange="terapkanPreset()" class="w-full bg-slate-900/90 border border-slate-700/60 rounded-xl p-3 text-white font-semibold text-xs focus:outline-none">
+                        <option value="hari">Hari ini</option>
+                        <option value="7hari" selected>7 hari terakhir</option>
+                        <option value="bulan">Bulan ini</option>
+                        <option value="kustom">Pilih tanggal sendiri</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 mb-1.5">Dari</label>
+                        <input id="rapor-from" type="date" oninput="document.getElementById('rapor-preset').value='kustom'" class="w-full bg-slate-900/90 border border-slate-700/60 rounded-xl p-3 text-white text-xs focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 mb-1.5">Sampai</label>
+                        <input id="rapor-to" type="date" oninput="document.getElementById('rapor-preset').value='kustom'" class="w-full bg-slate-900/90 border border-slate-700/60 rounded-xl p-3 text-white text-xs focus:outline-none">
+                    </div>
+                </div>
+
+                <div id="rapor-preview" class="space-y-2"></div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 pt-4 mt-3 border-t border-white/10">
+                <button id="btn-rapor-tampil" onclick="tampilkanRapor()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs py-3 rounded-xl transition">Tampilkan rapor</button>
+                <button id="btn-rapor-pdf" onclick="unduhPdfRapor()" disabled class="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs py-3 rounded-xl transition disabled:opacity-40">Unduh PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Service Worker PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                if (window.caches) {
+                    caches.keys().then(keys => {
+                        keys.forEach(key => {
+                            if (key !== 'feeding-manual-pwa-v25-no-html-cache') caches.delete(key);
+                        });
+                    });
+                }
+
+                navigator.serviceWorker.register('./service-worker.js?v=25')
+                    .then(reg => {
+                        reg.update();
+                        if (reg.waiting) reg.waiting.postMessage({type: 'SKIP_WAITING'});
+                    })
+                    .catch(err => console.warn('Service Worker gagal terdaftar:', err));
+            });
+        }
+
+        // Configuration
+        const API_URL = "https://script.google.com/macros/s/AKfycbxLgmvjs2qsvZ4BP1MQRy7mWbqPyfXHe6dEXhXkNK2tLThdEi_ISGZlWXBse1p1IjLd_w/exec";
+
+        let MASTER_DATA = {};
+        let SELECTED_PENS = [];
+        let COUNTER_JOBS = {};
+        let SISA_MAP = {};
+        let RAPOR_DATA = null;
+
+        function parseDecimalNumber(val) {
+            if (val === undefined || val === null || val === "") return 0;
+            if (typeof val === 'number') return val;
+            const cleanStr = String(val).trim().replace(',', '.');
+            const parsed = parseFloat(cleanStr);
+            return isNaN(parsed) ? 0 : parsed;
+        }
+
+        function formatTargetDisplay(val) {
+            const num = parseDecimalNumber(val);
+            if (num === 0) return '0';
+            // Pembulatan angka desimal presisi tinggi hingga 3 desimal jika diperlukan (e.g. 0.138 -> 0,138 atau 25 -> 25)
+            const rounded = Number(Math.round(num + "e3") + "e-3");
+            return rounded.toString().replace('.', ',');
+        }
+
+        function rebuildCounterFromLog() {
+            COUNTER_JOBS = {};
+
+            if (!MASTER_DATA.log || MASTER_DATA.log.length === 0) return;
+
+            const uniqueJobs = {};
+
+            MASTER_DATA.log.forEach(item => {
+                if (!item.pen || !item.shift) return;
+
+                const jobKey = item.batch_id || `${item.tanggal || ''}|${item.shift}|${item.pen}`;
+                if (uniqueJobs[jobKey]) return;
+                uniqueJobs[jobKey] = true;
+
+                String(item.pen).split(',').forEach(p => {
+                    const penName = p.trim();
+                    if (!penName) return;
+
+                    const counterKey = `${penName}-${item.shift}`;
+                    COUNTER_JOBS[counterKey] = (COUNTER_JOBS[counterKey] || 0) + 1;
+                });
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if(API_URL === "") {
+                alert("Peringatan: URL API Google Apps Script belum diisi!");
+                return;
+            }
+
+            fetch(API_URL)
+                .then(res => res.json())
+                .then(data => {
+                    MASTER_DATA = data;
+                    rebuildCounterFromLog();
+                    buildSisaMap();
+                    
+                    const optSelect = document.getElementById('operator');
+                    optSelect.innerHTML = '<option value="" disabled selected>PILIH OPERATOR</option>';
+                    data.operators.forEach(op => {
+                        optSelect.innerHTML += `<option value="${op}">${op}</option>`;
+                    });
+
+                    renderPenList();
+                })
+                .catch(err => {
+                    alert('Koneksi Gagal! Periksa jaringan atau deployment Web App Anda.');
+                    console.error(err);
+                });
+        });
+
+        function renderPenList() {
+            const container = document.getElementById('container-pen');
+            const currentShift = document.getElementById('shift').value;
+            container.innerHTML = '';
+
+            if(!MASTER_DATA.pens) return;
+
+            MASTER_DATA.pens.forEach(pn => {
+                const key = `${pn}-${currentShift}`;
+                const count = COUNTER_JOBS[key] || 0;
+                
+                let bgClass = 'bg-slate-900/80 hover:bg-slate-800/80 border-slate-700/50';
+                let statusLabel = '';
+                let isLocked = false;
+
+                if (count === 1) {
+                    bgClass = 'bg-amber-950/40 border-amber-500/50';
+                    statusLabel = '<span class="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold px-1.5 py-0.5 rounded ml-2">1x TIMBANG</span>';
+                } else if (count >= 2) {
+                    bgClass = 'bg-slate-950/40 opacity-40 border-dashed border-slate-800';
+                    statusLabel = '<span class="text-[9px] bg-slate-800 text-slate-400 font-bold px-1.5 py-0.5 rounded ml-2">2x - DONE</span>';
+                    isLocked = true;
+                }
+
+                const item = `
+                    <div id="card-pen-${pn}" class="flex justify-between items-center p-3 rounded-xl border transition select-none ${bgClass} ${isLocked ? 'pointer-events-none' : 'cursor-pointer'}" 
+                         onclick="${isLocked ? '' : `togglePenSelection('${pn}')`}">
+                        <div class="flex items-center">
+                            <span class="font-bold text-xs text-white">${pn}</span>
+                            ${statusLabel}
+                        </div>
+                        <input type="checkbox" id="chk-${pn}" value="${pn}" class="w-4 h-4 rounded accent-rose-500 pointer-events-none bg-slate-900" ${SELECTED_PENS.includes(pn) ? 'checked' : ''} ${isLocked ? 'disabled' : ''}>
+                    </div>
+                `;
+                container.innerHTML += item;
+            });
+        }
+
+        function resetSelectionAndRender() {
+            SELECTED_PENS = [];
+            document.getElementById('pen-counter').innerText = "0/4";
+            renderPenList();
+            renderBahanBaku();
+        }
+
+        function togglePenSelection(penName) {
+            if (SELECTED_PENS.includes(penName)) {
+                SELECTED_PENS = SELECTED_PENS.filter(p => p !== penName);
+            } else {
+                if (SELECTED_PENS.length >= 4) {
+                    alert('Batas Maksimal Penggabungan: Maksimal 4 Pen!');
+                    return;
+                }
+                SELECTED_PENS.push(penName);
+            }
+
+            document.getElementById('pen-counter').innerText = `${SELECTED_PENS.length}/4`;
+            renderPenList();
+            renderBahanBaku();
+        }
+
+        function renderBahanBaku() {
+            const currentShift = document.getElementById('shift').value;
+            const container = document.getElementById('container-bahan');
+            
+            if (SELECTED_PENS.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 italic text-center py-6">Pilih minimal satu pen di atas untuk memuat target pakan.</p>`;
+                return;
+            }
+
+            let akumulasiBahan = {};
+
+            SELECTED_PENS.forEach(penName => {
+                const match = MASTER_DATA.master_pakan.find(item => item.pen === penName && item.shift === currentShift);
+                if (match && match.bahan) {
+                    match.bahan.forEach(b => {
+                        const namaBahanClean = b.nama_bahan.trim().toUpperCase();
+                        if (namaBahanClean === "KONSENTRAT" || namaBahanClean === "MOLASES") {
+                            return; 
+                        }
+
+                        if (!akumulasiBahan[b.nama_bahan]) {
+                            akumulasiBahan[b.nama_bahan] = 0;
+                        }
+                        const bobotNumeric = parseDecimalNumber(b.target_bobot);
+                        akumulasiBahan[b.nama_bahan] += bobotNumeric;
+                    });
+                }
+            });
+
+            container.innerHTML = '';
+            const keys = Object.keys(akumulasiBahan);
+
+            if (keys.length === 0) {
+                container.innerHTML = `<p class="text-xs text-amber-400 font-bold text-center py-6">Tidak ada formula pakan lapangan untuk pen & shift ini.</p>`;
+                return;
+            }
+
+            keys.forEach((namaBahan, index) => {
+                const targetAkhir = akumulasiBahan[namaBahan];
+                const displayTarget = formatTargetDisplay(targetAkhir);
+                const sisaNow = getSisaByBahan(namaBahan);
+                const sisaAttr = sisaNow === null ? '' : sisaNow;
+                const sisaText = sisaNow === null ? 'Belum ada data' : `${fmtNum(sisaNow, 2)} KG`;
+                const sisaClass = (sisaNow !== null && sisaNow <= 0) ? 'text-rose-400' : 'text-emerald-400';
+
+                const card = `
+                    <div class="electric-box bg-slate-900/90 rounded-2xl p-4 text-center shadow-xl relative border border-white/10">
+                        <div class="absolute top-3 left-4 bg-slate-950 px-2 py-0.5 rounded text-[9px] font-bold text-rose-400 border border-rose-500/20">BAHAN ${index + 1}</div>
+                        <div class="text-[11px] uppercase tracking-wider text-slate-300 font-bold mt-1">${namaBahan}</div>
+                        <div class="text-3xl font-extrabold my-1 text-white">${displayTarget} <span class="text-xs font-medium text-rose-400">KG</span></div> 
+                        <div class="mt-2 grid grid-cols-2 gap-2 relative z-10">
+                            <div class="rounded-lg bg-slate-950/70 border border-white/10 py-1.5 px-2">
+                                <div class="text-[9px] font-bold text-slate-400">Sisa stok</div>
+                                <div id="sisa-now-${index}" class="text-sm font-extrabold ${sisaClass}">${sisaText}</div>
+                            </div>
+                            <div class="rounded-lg bg-slate-950/70 border border-white/10 py-1.5 px-2">
+                                <div class="text-[9px] font-bold text-slate-400">Setelah timbang</div>
+                                <div id="sisa-after-${index}" class="text-sm font-extrabold text-slate-500">-</div>
+                            </div>
+                        </div>
+                        <div class="mt-2 relative z-10">
+                            <input type="number" step="any" inputmode="decimal" data-bahan="${namaBahan}" data-target="${targetAkhir}" data-idx="${index}" data-sisa="${sisaAttr}" oninput="updateSisaPreview(this)" placeholder="INPUT REALISASI TIMBANGAN (KG)" 
+                                   class="input-aktual w-full p-3 text-center text-slate-900 font-extrabold text-md rounded-xl bg-slate-100 focus:outline-none focus:ring-2 focus:ring-rose-500 placeholder-slate-400">
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += card;
+            });
+        }
+
+        function kirimTimbangan() {
+            const operator = document.getElementById('operator').value;
+            const shift = document.getElementById('shift').value;
+            const inputElements = document.querySelectorAll('.input-aktual');
+            const btnSubmit = document.getElementById('btn-submit');
+
+            if (!operator) {
+                alert('Pilih nama operator helper terlebih dahulu!');
+                return;
+            }
+            if (SELECTED_PENS.length === 0) {
+                alert('Anda belum mencentang pen/kandang mana pun!');
+                return;
+            }
+
+            let payload = [];
+            let isFormValid = true;
+
+            inputElements.forEach(input => {
+                const nilaiRaw = input.value;
+                const nilaiParsed = parseDecimalNumber(nilaiRaw);
+
+                if (nilaiRaw === "" || isNaN(nilaiParsed)) {
+                    isFormValid = false;
+                }
+                payload.push({
+                    operator: operator,
+                    shift: shift,
+                    pen: SELECTED_PENS.join(', '), 
+                    nama_bahan: input.getAttribute('data-bahan'),
+                    target: parseFloat(input.getAttribute('data-target')),
+                    aktual: nilaiParsed,
+                    persentase: "100%"
+                });
+            });
+
+            if (!isFormValid || payload.length === 0) {
+                alert('Gagal Simpan! Harap isi seluruh kolom aktual pakan hasil timbangan.');
+                return;
+            }
+
+            btnSubmit.disabled = true;
+            btnSubmit.innerText = "MENGIRIM DATA...";
+            btnSubmit.classList.add('opacity-50');
+
+            fetch(API_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            })
+            .then(() => {
+                const selectedText = SELECTED_PENS.join(', ');
+
+                SELECTED_PENS.forEach(p => {
+                    const key = `${p}-${shift}`;
+                    if (!COUNTER_JOBS[key]) {
+                        COUNTER_JOBS[key] = 0;
+                    }
+                    COUNTER_JOBS[key] += 1;
+                });
+
+                alert(`Sukses! Penimbangan gabungan untuk pen [${selectedText}] berhasil disimpan.`);
+                resetSelectionAndRender();
+                refreshSisa();
+            })
+            .catch(err => {
+                alert('Terjadi kesalahan saat mengirim data ke spreadsheet!');
+            })
+            .finally(() => {
+                btnSubmit.disabled = false;
+                btnSubmit.innerText = "Simpan & Kirim Timbangan";
+                btnSubmit.classList.remove('opacity-50');
+            });
+        }
+
+        // =====================================================================
+        //  SISA BAHAN KERING (realtime saat input)
+        // =====================================================================
+        let SISA_UPDATED_AT = null;
+
+        function normKey(s) {
+            return String(s || '').trim().replace(/\s+/g, ' ').toUpperCase();
+        }
+
+        function escapeHtml(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        function fmtNum(v, d = 2) {
+            const n = Number(v);
+            if (isNaN(n)) return '-';
+            return n.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: d });
+        }
+
+        function fmtSigned(v, d = 2, suffix = '') {
+            const n = Number(v) || 0;
+            return (n > 0 ? '+' : '') + fmtNum(n, d) + suffix;
+        }
+
+        function buildSisaMap() {
+            SISA_MAP = {};
+            (MASTER_DATA.sisa || []).forEach(s => {
+                SISA_MAP[normKey(s.nama_item)] = parseDecimalNumber(s.estimasi_sisa);
+            });
+            SISA_UPDATED_AT = new Date();
+        }
+
+        function getSisaByBahan(nama) {
+            const k = normKey(nama);
+            return Object.prototype.hasOwnProperty.call(SISA_MAP, k) ? SISA_MAP[k] : null;
+        }
+
+        // Preview sisa stok setelah nilai timbangan diketik
+        function updateSisaPreview(input) {
+            const el = document.getElementById(`sisa-after-${input.dataset.idx}`);
+            if (!el) return;
+            const sisa = parseFloat(input.dataset.sisa);
+            if (isNaN(sisa) || input.value === '') {
+                el.textContent = '-';
+                el.className = 'text-sm font-extrabold text-slate-500';
+                return;
+            }
+            const after = sisa - parseDecimalNumber(input.value);
+            el.textContent = `${fmtNum(after, 2)} KG`;
+            el.className = 'text-sm font-extrabold ' + (after < 0 ? 'text-rose-400' : 'text-emerald-400');
+        }
+
+        // Perbarui angka sisa di kartu yang sedang tampil tanpa menghapus isian helper
+        function syncSisaToCards() {
+            document.querySelectorAll('.input-aktual').forEach(inp => {
+                const s = getSisaByBahan(inp.dataset.bahan);
+                inp.dataset.sisa = s === null ? '' : s;
+                const el = document.getElementById(`sisa-now-${inp.dataset.idx}`);
+                if (el) {
+                    el.textContent = s === null ? 'Belum ada data' : `${fmtNum(s, 2)} KG`;
+                    el.className = 'text-sm font-extrabold ' + ((s !== null && s <= 0) ? 'text-rose-400' : 'text-emerald-400');
+                }
+                updateSisaPreview(inp);
+            });
+        }
+
+        async function refreshSisa() {
+            try {
+                const res = await fetch(`${API_URL}?action=sisa&t=${Date.now()}`);
+                const data = await res.json();
+                MASTER_DATA.sisa = data.sisa || [];
+                if (data.server_date) MASTER_DATA.server_date = data.server_date;
+                buildSisaMap();
+                syncSisaToCards();
+                return true;
+            } catch (err) {
+                console.warn('Gagal memuat sisa stok:', err);
+                return false;
+            }
+        }
+
+        // =====================================================================
+        //  MODAL
+        // =====================================================================
+        function bukaModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function tutupModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function fmtJam(d) {
+            return d.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' }) + ' WIB';
+        }
+
+        function stampWIB() {
+            return new Date().toLocaleString('id-ID', {
+                timeZone: 'Asia/Jakarta', day: '2-digit', month: 'long', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            }) + ' WIB';
+        }
+
+        function fmtTgl(str) {
+            return new Date(str + 'T00:00:00Z').toLocaleDateString('id-ID', {
+                timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric'
+            });
+        }
+
+        function todayWIB() {
+            return new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' });
+        }
+
+        function shiftDate(str, days) {
+            const d = new Date(str + 'T00:00:00Z');
+            d.setUTCDate(d.getUTCDate() + days);
+            return d.toISOString().slice(0, 10);
+        }
+
+        function pdfReady() {
+            if (window.jspdf && window.jspdf.jsPDF) {
+                const probe = new window.jspdf.jsPDF();
+                if (typeof probe.autoTable === 'function') return true;
+            }
+            alert('Library PDF belum termuat. Periksa koneksi internet lalu coba lagi.');
+            return false;
+        }
+
+        // ---------- Modal Sisa Stok ----------
+        function renderModalSisa() {
+            const list = document.getElementById('sisa-list');
+            const data = MASTER_DATA.sisa || [];
+            document.getElementById('sisa-updated').textContent =
+                SISA_UPDATED_AT ? `Diperbarui pukul ${fmtJam(SISA_UPDATED_AT)}` : '';
+
+            if (!data.length) {
+                list.innerHTML = '<p class="text-xs text-amber-400 font-bold text-center py-8">Belum ada data di sheet Sisa_Bahan_Kering.</p>';
+                return;
+            }
+
+            list.innerHTML = data.map(s => {
+                const habis = Number(s.estimasi_sisa) <= 0;
+                return `
+                    <div class="flex justify-between items-center bg-slate-900/90 border ${habis ? 'border-rose-500/50' : 'border-white/10'} rounded-xl px-3 py-2.5">
+                        <div class="pr-2">
+                            <div class="text-xs font-bold text-white">${escapeHtml(s.nama_item)}</div>
+                            <div class="text-[10px] text-slate-400">Stock awal ${fmtNum(s.stock_awal, 2)} KG, terpakai ${fmtNum(s.usage, 2)} KG</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <div class="text-base font-extrabold ${habis ? 'text-rose-400' : 'text-emerald-400'}">${fmtNum(s.estimasi_sisa, 2)}</div>
+                            <div class="text-[9px] text-slate-400">KG</div>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        async function bukaModalSisa() {
+            bukaModal('modal-sisa');
+            renderModalSisa();
+            await muatUlangSisaModal();
+        }
+
+        async function muatUlangSisaModal() {
+            document.getElementById('sisa-updated').textContent = 'Memuat data terbaru...';
+            const ok = await refreshSisa();
+            renderModalSisa();
+            if (!ok) document.getElementById('sisa-updated').textContent = 'Gagal memuat, menampilkan data terakhir.';
+        }
+
+        // ---------- PDF: Report Sisa Bahan Kering ----------
+        async function unduhPdfSisa() {
+            if (!pdfReady()) return;
+
+            const btn = document.getElementById('btn-pdf-sisa');
+            btn.disabled = true;
+            btn.textContent = 'Menyiapkan PDF...';
+
+            try {
+                await refreshSisa();
+                renderModalSisa();
+
+                const data = MASTER_DATA.sisa || [];
+                if (!data.length) {
+                    alert('Belum ada data sisa bahan kering untuk dicetak.');
+                    return;
+                }
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+                const operator = document.getElementById('operator').value;
+
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(15);
+                doc.text('LAPORAN SISA BAHAN KERING', 14, 16);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.text('Dairy Farm Feeding System', 14, 21.5);
+                doc.text(`Dicetak: ${stampWIB()}`, 14, 27);
+                doc.text(`Pemeriksa: ${operator || '..............................'}`, 14, 32);
+
+                doc.autoTable({
+                    startY: 37,
+                    head: [['No', 'Nama Item', 'Stock Awal (KG)', 'Usage (KG)', 'Estimasi Sisa (KG)', 'Stock Fisik (KG)', 'Selisih (KG)', 'Ket.']],
+                    body: data.map((s, i) => [
+                        i + 1, s.nama_item, fmtNum(s.stock_awal, 2), fmtNum(s.usage, 2),
+                        fmtNum(s.estimasi_sisa, 2), '', '', ''
+                    ]),
+                    theme: 'grid',
+                    styles: { fontSize: 8.5, cellPadding: 2, minCellHeight: 9, valign: 'middle', lineColor: [180, 180, 180], lineWidth: 0.2 },
+                    headStyles: { fillColor: [190, 18, 60], textColor: 255, halign: 'center' },
+                    columnStyles: {
+                        0: { halign: 'center', cellWidth: 10 },
+                        1: { cellWidth: 38 },
+                        2: { halign: 'right', cellWidth: 24 },
+                        3: { halign: 'right', cellWidth: 22 },
+                        4: { halign: 'right', cellWidth: 26, fontStyle: 'bold' },
+                        5: { cellWidth: 24 },
+                        6: { cellWidth: 22 },
+                        7: { cellWidth: 14 }
+                    },
+                    margin: { left: 14, right: 14 }
+                });
+
+                const pageH = doc.internal.pageSize.getHeight();
+                let y = doc.lastAutoTable.finalY + 8;
+                if (y > pageH - 50) { doc.addPage(); y = 20; }
+
+                doc.setFontSize(8);
+                doc.setTextColor(90);
+                const note = doc.splitTextToSize(
+                    'Estimasi Sisa dihitung dari Stock Awal dikurangi pemakaian (usage) yang tercatat dari timbangan helper. ' +
+                    'Isi kolom Stock Fisik sesuai hasil pengecekan di lapangan, lalu bandingkan dengan Estimasi Sisa.', 182);
+                doc.text(note, 14, y);
+                doc.setTextColor(0);
+
+                y += 22;
+                doc.setFontSize(9);
+                doc.text('Helper', 45, y, { align: 'center' });
+                doc.text('Supervisor Feeding', 150, y, { align: 'center' });
+                doc.line(25, y + 20, 65, y + 20);
+                doc.line(130, y + 20, 170, y + 20);
+
+                doc.save(`Sisa_Bahan_Kering_${MASTER_DATA.server_date || todayWIB()}.pdf`);
+            } catch (err) {
+                console.error(err);
+                alert('Gagal membuat PDF sisa stok.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Unduh PDF';
+            }
+        }
+
+        // =====================================================================
+        //  RAPOR HELPER
+        // =====================================================================
+        const GRADE_COLOR = { A: [5, 150, 105], B: [2, 132, 199], C: [217, 119, 6], D: [190, 18, 60] };
+        const GRADE_TW = { A: 'text-emerald-400', B: 'text-sky-400', C: 'text-amber-400', D: 'text-rose-400' };
+
+        function bukaModalRapor() {
+            const sel = document.getElementById('rapor-helper');
+            const current = document.getElementById('operator').value;
+            sel.innerHTML = '<option value="">Semua helper</option>' +
+                (MASTER_DATA.operators || []).map(op => `<option value="${escapeHtml(op)}">${escapeHtml(op)}</option>`).join('');
+            if (current) sel.value = current;
+
+            document.getElementById('rapor-preset').value = '7hari';
+            terapkanPreset();
+            document.getElementById('rapor-preview').innerHTML = '';
+            document.getElementById('btn-rapor-pdf').disabled = true;
+            RAPOR_DATA = null;
+            bukaModal('modal-rapor');
+        }
+
+        function terapkanPreset() {
+            const p = document.getElementById('rapor-preset').value;
+            const to = MASTER_DATA.server_date || todayWIB();
+            let from = to;
+            if (p === '7hari') from = shiftDate(to, -6);
+            else if (p === 'bulan') from = to.slice(0, 8) + '01';
+            else if (p === 'kustom') return;
+            document.getElementById('rapor-from').value = from;
+            document.getElementById('rapor-to').value = to;
+        }
+
+        async function tampilkanRapor() {
+            const helper = document.getElementById('rapor-helper').value;
+            const from = document.getElementById('rapor-from').value;
+            const to = document.getElementById('rapor-to').value;
+            const btn = document.getElementById('btn-rapor-tampil');
+            const preview = document.getElementById('rapor-preview');
+
+            if (!from || !to || from > to) {
+                alert('Periode tidak valid. Pastikan tanggal awal tidak lebih besar dari tanggal akhir.');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Memuat...';
+            document.getElementById('btn-rapor-pdf').disabled = true;
+            preview.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Menghitung rapor...</p>';
+
+            try {
+                const url = `${API_URL}?action=rapor&from=${from}&to=${to}&helper=${encodeURIComponent(helper)}&t=${Date.now()}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.status !== 'ok') throw new Error(data.message || 'Respons tidak valid');
+                RAPOR_DATA = data;
+                renderRaporPreview();
+            } catch (err) {
+                console.error(err);
+                RAPOR_DATA = null;
+                preview.innerHTML = '<p class="text-xs text-rose-400 font-bold text-center py-4">Gagal memuat rapor. Pastikan Web App sudah di-deploy ulang dengan kode backend terbaru.</p>';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Tampilkan rapor';
+            }
+        }
+
+        function renderRaporPreview() {
+            const d = RAPOR_DATA;
+            const preview = document.getElementById('rapor-preview');
+            const pdfBtn = document.getElementById('btn-rapor-pdf');
+
+            if (!d || !d.operators.length) {
+                preview.innerHTML = '<p class="text-xs text-amber-400 font-bold text-center py-4">Tidak ada data timbangan pada periode ini.</p>';
+                pdfBtn.disabled = true;
+                return;
+            }
+
+            const head = `<p class="text-[10px] text-slate-400">Periode ${fmtTgl(d.from)} s/d ${fmtTgl(d.to)}</p>`;
+            const cards = d.operators.map(op => `
+                <div class="flex justify-between items-center bg-slate-900/90 border border-white/10 rounded-xl px-3 py-2.5">
+                    <div class="pr-2">
+                        <div class="text-sm font-bold text-white">${escapeHtml(op.nama)}</div>
+                        <div class="text-[10px] text-slate-400">${op.batch} penimbangan, ${op.item} item, akurasi ${fmtNum(op.akurasi, 1)}%</div>
+                        <div class="text-[10px] text-slate-400">${op.sesuai} dari ${op.item} item sesuai toleransi (${fmtNum(op.skor_sesuai, 1)}%)</div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <div class="text-3xl font-extrabold ${GRADE_TW[op.grade] || 'text-white'}">${op.grade}</div>
+                        <div class="text-[9px] text-slate-400">${escapeHtml(op.predikat)}</div>
+                    </div>
+                </div>`).join('');
+
+            preview.innerHTML = head + cards;
+            pdfBtn.disabled = false;
+        }
+
+        function gradeLegend(d) {
+            const g = d.grade_table || [];
+            if (!g.length) return '';
+            return 'Nilai berdasarkan persentase item sesuai toleransi: ' + g.map((x, i) =>
+                i < g.length - 1 ? `${x.huruf} ${x.min}% ke atas` : `${x.huruf} di bawah ${g[i - 1].min}%`
+            ).join(', ') + '.';
+        }
+
+        function drawRaporPage(doc, op, d) {
+            const W = doc.internal.pageSize.getWidth();
+            const col = GRADE_COLOR[op.grade] || [0, 0, 0];
+
+            doc.setTextColor(0);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.text('RAPOR HELPER FEEDING', 14, 16);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.text('Dairy Farm Feeding System', 14, 21.5);
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(13);
+            doc.text(op.nama, 14, 32);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.text(`Periode: ${fmtTgl(d.from)} s/d ${fmtTgl(d.to)}`, 14, 38);
+            doc.text(`Dicetak: ${stampWIB()}`, 14, 43);
+
+            doc.setTextColor(col[0], col[1], col[2]);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(36);
+            doc.text(op.grade, W - 14, 27, { align: 'right' });
+            doc.setFontSize(9);
+            doc.text(op.predikat, W - 14, 34, { align: 'right' });
+            doc.setTextColor(0);
+
+            doc.autoTable({
+                startY: 49,
+                theme: 'grid',
+                body: [
+                    ['Hari kerja', String(op.hari_kerja), 'Jumlah penimbangan', String(op.batch)],
+                    ['Item ditimbang', String(op.item), 'Akurasi berat', `${fmtNum(op.akurasi, 1)}%`],
+                    ['Total target', `${fmtNum(op.total_target, 2)} KG`, 'Total aktual', `${fmtNum(op.total_aktual, 2)} KG`],
+                    ['Selisih bersih', fmtSigned(op.selisih_bersih, 2, ' KG'), 'Item sesuai toleransi', `${op.sesuai} dari ${op.item} (${fmtNum(op.skor_sesuai, 1)}%)`],
+                    ['Lebih dari target', `${op.lebih} item`, 'Kurang dari target', `${op.kurang} item`]
+                ],
+                styles: { fontSize: 9, cellPadding: 2.2, lineColor: [200, 200, 200], lineWidth: 0.2 },
+                columnStyles: {
+                    0: { fontStyle: 'bold', fillColor: [245, 245, 245], cellWidth: 36 },
+                    1: { cellWidth: 55 },
+                    2: { fontStyle: 'bold', fillColor: [245, 245, 245], cellWidth: 40 },
+                    3: { cellWidth: 51 }
+                },
+                margin: { left: 14, right: 14 }
+            });
+
+            doc.autoTable({
+                startY: doc.lastAutoTable.finalY + 8,
+                head: [['Bahan', 'Jml', 'Target (KG)', 'Aktual (KG)', 'Selisih (KG)', 'Deviasi', 'Sesuai']],
+                body: op.bahan.map(b => {
+                    const selisih = b.aktual - b.target;
+                    const dev = b.target > 0 ? (selisih / b.target) * 100 : 0;
+                    const sesuaiPct = b.n > 0 ? (b.sesuai / b.n) * 100 : 0;
+                    return [
+                        b.nama, String(b.n), fmtNum(b.target, 2), fmtNum(b.aktual, 2),
+                        fmtSigned(selisih, 2), fmtSigned(dev, 1, '%'), `${fmtNum(sesuaiPct, 0)}%`
+                    ];
+                }),
+                theme: 'grid',
+                styles: { fontSize: 8.5, cellPadding: 2, lineColor: [200, 200, 200], lineWidth: 0.2 },
+                headStyles: { fillColor: [190, 18, 60], textColor: 255, halign: 'center' },
+                columnStyles: {
+                    0: { cellWidth: 50 },
+                    1: { halign: 'center', cellWidth: 14 },
+                    2: { halign: 'right', cellWidth: 28 },
+                    3: { halign: 'right', cellWidth: 28 },
+                    4: { halign: 'right', cellWidth: 26 },
+                    5: { halign: 'right', cellWidth: 20 },
+                    6: { halign: 'right', cellWidth: 16 }
+                },
+                margin: { left: 14, right: 14 }
+            });
+
+            const pageH = doc.internal.pageSize.getHeight();
+            let y = doc.lastAutoTable.finalY + 8;
+            if (y > pageH - 30) { doc.addPage(); y = 20; }
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(90);
+            const note = doc.splitTextToSize(
+                `Keterangan: timbangan dinilai sesuai jika selisih tidak lebih dari +/-${d.toleransi_persen}% dari target ` +
+                `(atau +/-${fmtNum(d.toleransi_min_kg, 2)} KG untuk target kecil). ` +
+                'Akurasi berat = 100% dikurangi (total selisih absolut / total target). ' + gradeLegend(d), 182);
+            doc.text(note, 14, y);
+            doc.setTextColor(0);
+        }
+
+        function unduhPdfRapor() {
+            const d = RAPOR_DATA;
+            if (!d || !d.operators.length) {
+                alert('Tampilkan rapor terlebih dahulu.');
+                return;
+            }
+            if (!pdfReady()) return;
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+            let first = true;
+
+            if (d.operators.length > 1) {
+                const ranking = d.operators.slice().sort((a, b) => (b.skor_sesuai - a.skor_sesuai) || (b.item - a.item));
+
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(16);
+                doc.text('RINGKASAN RAPOR HELPER FEEDING', 14, 16);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.text('Dairy Farm Feeding System', 14, 21.5);
+                doc.text(`Periode: ${fmtTgl(d.from)} s/d ${fmtTgl(d.to)}`, 14, 27);
+                doc.text(`Dicetak: ${stampWIB()}`, 14, 32);
+
+                doc.autoTable({
+                    startY: 38,
+                    head: [['Rank', 'Helper', 'Hari', 'Timbang', 'Item', 'Akurasi', 'Sesuai', 'Lebih', 'Kurang', 'Nilai']],
+                    body: ranking.map((o, i) => [
+                        i + 1, o.nama, o.hari_kerja, o.batch, o.item,
+                        `${fmtNum(o.akurasi, 1)}%`, `${fmtNum(o.skor_sesuai, 1)}%`, o.lebih, o.kurang, o.grade
+                    ]),
+                    theme: 'grid',
+                    styles: { fontSize: 8.5, cellPadding: 2, halign: 'center', lineColor: [200, 200, 200], lineWidth: 0.2 },
+                    headStyles: { fillColor: [190, 18, 60], textColor: 255 },
+                    columnStyles: { 1: { halign: 'left', cellWidth: 42 } },
+                    margin: { left: 14, right: 14 }
+                });
+
+                const y = doc.lastAutoTable.finalY + 8;
+                doc.setFontSize(8);
+                doc.setTextColor(90);
+                doc.text(doc.splitTextToSize(gradeLegend(d), 182), 14, y);
+                doc.setTextColor(0);
+                first = false;
+            }
+
+            d.operators.forEach(op => {
+                if (!first) doc.addPage();
+                first = false;
+                drawRaporPage(doc, op, d);
+            });
+
+            const label = d.operators.length === 1
+                ? d.operators[0].nama.replace(/[^\w\-]+/g, '_')
+                : 'Semua_Helper';
+            doc.save(`Rapor_${label}_${d.from}_${d.to}.pdf`);
+        }
+    </script>
+</body>
+</html>

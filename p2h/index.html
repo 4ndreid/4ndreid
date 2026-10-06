@@ -1,0 +1,2103 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>P2H Alat Berat — Dairy Feed Ops</title>
+<meta name="theme-color" content="#030712">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="P2H Alat Berat">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/p2h/manifest.json?v=3">
+<link rel="icon" type="image/png" sizes="192x192" href="/p2h/icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/p2h/icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#030712;
+    --surface:rgba(15, 23, 42, 0.75);
+    --surface-2:rgba(30, 41, 59, 0.85);
+    --border:rgba(255, 255, 255, 0.12);
+    --text:#f8fafc;
+    --text-muted:#cbd5e1;
+    --text-faint:#94a3b8;
+    --blue:#3b82f6;
+    --amber:#f59e0b;
+    --green:#10b981;
+    --red:#ef4444;
+    --radius:16px;
+    --radius-sm:10px;
+    --font-body:'Plus Jakarta Sans',sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:var(--font-body);
+    background-color:var(--bg) !important;
+    color:var(--text);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+    position:relative;
+    overflow-x:hidden;
+  }
+
+  /* Ambient Glow Orbs */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    z-index: 0;
+    opacity: 0.28;
+    pointer-events: none;
+    animation: floatOrb 8s infinite alternate ease-in-out;
+  }
+  .orb-1 { width: 400px; height: 400px; background: #2563eb; top: -100px; left: -100px; }
+  .orb-2 { width: 350px; height: 350px; background: #3b82f6; bottom: -80px; right: -80px; animation-delay: -4s; }
+
+  @keyframes floatOrb {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(25px, 35px) scale(1.08); }
+  }
+
+  /* ⚡ EFEK BINGKAI LISTRIK MUTER (ELECTRIC BORDER) ⚡ */
+  .electric-border {
+    position: relative;
+    border-radius: 14px;
+    padding: 1.5px;
+    overflow: hidden;
+    background: rgba(30, 41, 59, 0.8);
+  }
+  .electric-border::before {
+    content: "";
+    position: absolute;
+    inset: -90px;
+    background: conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      transparent 60deg,
+      #3b82f6 100deg,
+      #60a5fa 135deg,
+      #93c5fd 165deg,
+      #3b82f6 195deg,
+      transparent 255deg,
+      transparent 360deg
+    );
+    animation: electricBlueRotate 2.5s linear infinite;
+  }
+  .electric-border::after {
+    content: "";
+    position: absolute;
+    inset: 1.5px;
+    border-radius: 12.5px;
+    background: #0f172a;
+  }
+  .electric-border > * {
+    position: relative;
+    z-index: 2;
+  }
+
+  @keyframes electricBlueRotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .app{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);position:relative;z-index:10;}
+
+  /* Topbar */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 20px 6px;}
+  .topbar__eyebrow{display:block;font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;color:var(--blue);text-transform:uppercase;margin-bottom:3px;font-weight:700;}
+  .topbar h1{font-family:var(--font-body);font-weight:800;font-size:24px;letter-spacing:-.01em;color:var(--text);text-transform:uppercase;line-height:1;}
+  
+  .icon-btn{
+    width:40px;height:40px;flex:0 0 auto;border-radius:12px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text-muted);font-size:18px;display:flex;
+    align-items:center;justify-content:center;cursor:pointer;
+    transition:all .3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    backdrop-filter:blur(10px);
+  }
+  .icon-btn:active{transform:rotate(180deg) scale(0.92);}
+  .icon-btn:hover{color:#ffffff;border-color:var(--blue);box-shadow:0 0 15px rgba(59,130,246,0.4);}
+
+  /* Tabbar */
+  .tabbar{
+    position:relative;display:flex;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;
+    margin:16px 16px 0;background:var(--surface);border:1px solid var(--border);
+    border-radius:16px;padding:4px;gap:4px;backdrop-filter:blur(16px);
+  }
+  .tabbar::-webkit-scrollbar{display:none;}
+  .tabbar__btn{
+    flex:1;text-align:center;white-space:nowrap;border:none;background:transparent;
+    color:var(--text-faint);font-family:var(--font-body);font-weight:700;font-size:12px;
+    padding:10px 8px;border-radius:10px;cursor:pointer;transition:all .25s;position:relative;z-index:1;
+  }
+  .tabbar__btn.is-active{color:#ffffff;}
+  .tabbar__indicator{
+    position:absolute;top:4px;left:4px;height:calc(100% - 8px);width:0;
+    background:linear-gradient(135deg, #2563eb, #1d4ed8);border-radius:10px;
+    transition:left .3s cubic-bezier(.4,0,.2,1),width .3s cubic-bezier(.4,0,.2,1);
+    box-shadow:0 4px 14px rgba(37,99,235,.45);z-index:0;
+  }
+
+  /* Panels */
+  .content{flex:1;}
+  .panel{display:none;padding:18px 16px 90px;}
+  .panel.is-active{display:block;animation:fadeUp .4s cubic-bezier(0.16, 1, 0.3, 1);}
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Fields & Inputs */
+  .field{margin-top:16px;}
+  .field label{display:block;font-size:11.5px;font-weight:700;letter-spacing:.04em;color:var(--text-muted);text-transform:uppercase;margin-bottom:7px;}
+  .field-row{display:flex;gap:12px;}
+  .field-row .field{flex:1;margin-top:16px;}
+
+  select, input[type="text"], input[type="number"], input[type="date"], textarea{
+    width:100%;padding:13px 14px;border-radius:12px;border:none;
+    background:transparent !important;color:var(--text) !important;font-family:var(--font-body);
+    font-size:14px;font-weight:600;transition:all .3s cubic-bezier(0.25, 0.8, 0.25, 1);outline:none;
+  }
+  select:focus, input:focus, textarea:focus{
+    border-color:var(--blue) !important;
+    box-shadow:0 0 0 4px rgba(59,130,246,.25) !important;
+    background:rgba(15, 23, 42, 0.95) !important;
+  }
+  select{
+    appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%233b82f6' stroke-width='3'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7' /%3E%3C/svg%3E") !important;
+    background-repeat:no-repeat !important;background-position:right 14px center !important;background-size:16px !important;padding-right:36px;
+  }
+  select option { background:#0f172a !important; color:#ffffff !important; }
+  input.hm-input{font-family:var(--font-mono);}
+  input[type="date"]{font-family:var(--font-mono);color-scheme:dark;}
+  textarea{resize:vertical;min-height:70px;font-family:var(--font-body);}
+  .field__hint{display:block;margin-top:6px;font-size:11.5px;color:var(--text-faint);font-family:var(--font-mono);min-height:14px;}
+  .field__hint.is-warn{color:var(--amber);}
+
+  /* Segmented */
+  .segmented{display:flex;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:3px;gap:3px;}
+  .segmented__opt{flex:1;border:none;background:transparent;color:var(--text-faint);padding:10px 4px;border-radius:99px;font-weight:700;font-size:13px;cursor:pointer;transition:.2s;}
+  .segmented__opt.is-active{background:var(--blue);color:#ffffff;box-shadow:0 4px 12px rgba(59,130,246,0.35);}
+
+  /* Checklist */
+  .checklist{
+    margin-top:22px;border:1px solid var(--border);border-radius:16px;
+    background:var(--surface);overflow:hidden;backdrop-filter:blur(16px);
+    box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+  }
+  .checklist__head{
+    display:flex;justify-content:space-between;align-items:center;padding:14px 16px;
+    font-weight:800;font-size:14px;letter-spacing:.02em;text-transform:uppercase;
+    background:rgba(30, 41, 59, 0.9);border-bottom:1px solid var(--border);
+  }
+  .checklist__count{font-family:var(--font-mono);font-size:11.5px;color:var(--red);text-transform:none;font-weight:700;}
+  .checklist__note{padding:10px 16px;font-size:11.5px;color:var(--text-faint);border-bottom:1px solid var(--border);}
+  
+  .check-item{
+    display:flex;align-items:center;justify-content:space-between;padding:12px 16px;
+    border-bottom:1px solid var(--border);gap:10px;transition:background 0.25s ease;
+  }
+  .check-item:last-child{border-bottom:none;}
+  .check-item:hover { background: rgba(255, 255, 255, 0.03); }
+  .check-item__label{font-size:13.5px;font-weight:600;color:var(--text);flex:1;display:flex;align-items:center;}
+
+  .check-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:9px;flex:0 0 auto;border:1.5px solid var(--text-faint);background:transparent;transition:all .3s;}
+  .check-dot[data-state="OK"]{background:var(--green);border-color:var(--green);box-shadow:0 0 8px var(--green);}
+  .check-dot[data-state="CHECK"]{background:var(--amber);border-color:var(--amber);box-shadow:0 0 8px var(--amber);}
+
+  .check-toggle{display:flex;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:2px;gap:2px;flex:0 0 auto;transition:all .2s;}
+  .check-toggle__opt{
+    border:none;background:transparent;color:var(--text-faint);font-family:var(--font-mono);
+    font-size:11px;font-weight:700;letter-spacing:.03em;padding:8px 12px;border-radius:8px;
+    cursor:pointer;transition:.2s;min-width:40px;
+  }
+  .check-toggle__opt[data-active][data-value="OK"]{background:var(--green);color:#042f2e;box-shadow: 0 2px 8px rgba(16,185,129,0.3);}
+  .check-toggle__opt[data-active][data-value="CHECK"]{background:var(--amber);color:#451a03;box-shadow: 0 2px 8px rgba(245,158,11,0.3);}
+  .check-toggle.is-flagged{border-color:var(--red);box-shadow:0 0 0 3px rgba(239,68,68,.4);animation:shake 0.4s ease;}
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-4px); }
+    40%, 80% { transform: translateX(4px); }
+  }
+
+  /* Section Divider */
+  .section-divider{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:30px 0 14px;}
+  .section-divider span{font-weight:800;font-size:14px;letter-spacing:.02em;text-transform:uppercase;color:var(--text-muted);}
+
+  /* Cards */
+  .filter-row{margin-bottom:14px;}
+  .empty-state{text-align:center;color:var(--text-faint);font-size:13px;padding:50px 10px;font-weight:600;}
+
+  .history-list{display:flex;flex-direction:column;gap:12px;}
+  .h-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;
+    backdrop-filter:blur(16px);position:relative;overflow:hidden;
+    transition:all .3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+  .h-card:hover {
+    transform: translateY(-3px) scale(1.01);
+    border-color: rgba(59, 130, 246, 0.4);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px -3px rgba(59, 130, 246, 0.2);
+  }
+
+  .h-card__top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px;gap:10px;}
+  .h-card__unit{font-weight:800;font-size:16px;text-transform:uppercase;letter-spacing:.02em;color:#ffffff;}
+  .h-card__time{font-family:var(--font-mono);font-size:10.5px;color:var(--text-faint);white-space:nowrap;}
+  .h-card__meta{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:4px;}
+  
+  .chip{font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border);}
+  .chip--hm{font-family:var(--font-mono);color:var(--blue);border-color:rgba(59,130,246,0.4);}
+  .chip--ok{color:var(--green);border-color:rgba(16,185,129,.4);}
+  .chip--warn{color:var(--amber);border-color:rgba(245,158,11,.4);}
+  .chip--danger{color:var(--red);border-color:rgba(239,68,68,.4);}
+  .chip--info{color:var(--blue);border-color:rgba(59,130,246,.4);}
+  
+  .h-card__note{margin-top:9px;font-size:12.5px;color:var(--text-muted);font-style:italic;border-left:2px solid var(--blue);padding-left:10px;}
+  .h-card details{margin-top:9px;}
+  .h-card summary{cursor:pointer;font-size:12px;color:var(--blue);font-weight:700;list-style:none;}
+  .h-card summary::-webkit-details-marker{display:none;}
+  .h-detail-grid{margin-top:9px;display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;}
+  .h-detail-item{font-size:11.5px;display:flex;justify-content:space-between;color:var(--text-muted);gap:6px;}
+  .h-detail-item span:last-child{font-weight:700;flex:0 0 auto;}
+  .h-detail-item.is-warn span:last-child{color:var(--amber);}
+
+  .btn-quick-trouble {
+    width: 100%;
+    margin-top: 12px;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .btn-quick-trouble:hover {
+    background: rgba(245, 158, 11, 0.3);
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+  }
+
+  .btn-resolve-trouble {
+    width: 100%;
+    margin-top: 12px;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .btn-resolve-trouble:hover {
+    background: rgba(16, 185, 129, 0.3);
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+  }
+
+  /* Jadwal Servis Cards */
+  .jadwal-list{display:flex;flex-direction:column;gap:12px;}
+  .j-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;
+    border-left:4px solid var(--border);backdrop-filter:blur(16px);
+    transition:all .3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+  .j-card:hover { transform: translateY(-3px) scale(1.01); }
+  .j-card[data-status="OVERDUE"]{border-left-color:var(--red); box-shadow: 0 8px 20px -5px rgba(239,68,68,0.25); }
+  .j-card[data-status="SEGERA"]{border-left-color:var(--amber); box-shadow: 0 8px 20px -5px rgba(245,158,11,0.25); }
+  .j-card[data-status="AMAN"]{border-left-color:var(--green); box-shadow: 0 8px 20px -5px rgba(16,185,129,0.25); }
+  
+  .j-card__top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;}
+  .j-card__unit{font-weight:800;font-size:17px;text-transform:uppercase;letter-spacing:.02em;color:#ffffff;}
+  .status-badge{font-size:10px;font-weight:800;letter-spacing:.04em;padding:5px 10px;border-radius:999px;text-transform:uppercase;white-space:nowrap;}
+  .status-badge[data-status="OVERDUE"]{background:rgba(239,68,68,.2);color:var(--red);border:1px solid rgba(239,68,68,0.4);}
+  .status-badge[data-status="SEGERA"]{background:rgba(245,158,11,.2);color:var(--amber);border:1px solid rgba(245,158,11,0.4);}
+  .status-badge[data-status="AMAN"]{background:rgba(16,185,129,.2);color:var(--green);border:1px solid rgba(16,185,129,0.4);}
+  .status-badge[data-status="BELUM_DIATUR"]{background:rgba(148,163,184,.2);color:var(--text-muted);}
+
+  .j-card__hm{font-family:var(--font-mono);font-size:26px;font-weight:700;color:var(--text);margin-bottom:1px;}
+  .j-card__hm-label{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em;margin-bottom:11px;font-weight:700;}
+
+  .gauge{height:8px;border-radius:999px;background:var(--surface-2);overflow:hidden;margin-bottom:12px;}
+  .gauge__fill{height:100%;border-radius:999px;transition:width .4s ease;}
+  .gauge__fill[data-status="OVERDUE"]{background:var(--red);}
+  .gauge__fill[data-status="SEGERA"]{background:var(--amber);}
+  .gauge__fill[data-status="AMAN"]{background:var(--green);}
+  .gauge__fill[data-status="BELUM_DIATUR"]{background:var(--text-faint);}
+
+  .j-card__details{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;font-size:11.5px;color:var(--text-muted);}
+  .j-card__details b{display:block;color:var(--text);font-family:var(--font-mono);font-size:13px;margin-top:2px;font-weight:700;}
+
+  /* Rapor Grade Colors */
+  .j-card[data-grade="A"]{border-left-color:var(--green); box-shadow: 0 8px 20px -5px rgba(16,185,129,0.25);}
+  .j-card[data-grade="B"]{border-left-color:var(--blue); box-shadow: 0 8px 20px -5px rgba(59,130,246,0.25);}
+  .j-card[data-grade="C"]{border-left-color:var(--amber); box-shadow: 0 8px 20px -5px rgba(245,158,11,0.25);}
+  .j-card[data-grade="D"]{border-left-color:var(--red); box-shadow: 0 8px 20px -5px rgba(239,68,68,0.25);}
+  .status-badge[data-grade="A"]{background:rgba(16,185,129,.2);color:var(--green);border:1px solid rgba(16,185,129,0.4);}
+  .status-badge[data-grade="B"]{background:rgba(59,130,246,.2);color:var(--blue);border:1px solid rgba(59,130,246,0.4);}
+  .status-badge[data-grade="C"]{background:rgba(245,158,11,.2);color:var(--amber);border:1px solid rgba(245,158,11,0.4);}
+  .status-badge[data-grade="D"]{background:rgba(239,68,68,.2);color:var(--red);border:1px solid rgba(239,68,68,0.4);}
+
+  .btn-download-pdf{
+    width:100%;margin-top:12px;padding:10px;border-radius:10px;
+    border:1px solid rgba(59,130,246,0.4);background:rgba(59,130,246,0.15);
+    color:#93c5fd;font-size:12px;font-weight:800;cursor:pointer;transition:all .2s;
+    text-transform:uppercase;letter-spacing:.5px;text-decoration:none;display:block;text-align:center;
+  }
+  .btn-download-pdf:hover{background:rgba(59,130,246,0.3);color:#ffffff;box-shadow:0 0 12px rgba(59,130,246,0.4);}
+
+  /* Banner Tindak Lanjut P2H */
+  .followup-banner{
+    margin:0 16px 10px;border-radius:14px;overflow:hidden;
+    border:1px solid rgba(245,158,11,0.4);background:rgba(245,158,11,0.12);
+  }
+  .followup-banner__head{
+    display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;user-select:none;
+  }
+  .followup-banner__icon{font-size:16px;}
+  .followup-banner__text{flex:1;font-size:12.5px;font-weight:700;color:#fbbf24;}
+  .followup-banner__chevron{color:#fbbf24;transition:transform .2s;font-size:16px;}
+  .followup-banner.is-open .followup-banner__chevron{transform:rotate(90deg);}
+  .followup-banner__list{display:none;padding:0 14px 12px;}
+  .followup-banner.is-open .followup-banner__list{display:block;}
+  .followup-banner__item{
+    font-size:11.5px;color:var(--text-muted);padding:8px 0;border-top:1px solid rgba(245,158,11,0.25);
+  }
+  .followup-banner__item b{color:var(--text);display:block;font-size:12.5px;margin-bottom:2px;}
+  .followup-banner__resolve-btn{
+    display:block;margin-top:8px;padding:7px 10px;border-radius:8px;
+    border:1px solid rgba(16,185,129,0.4);background:rgba(16,185,129,0.15);
+    color:#6ee7b7;font-size:11px;font-weight:800;cursor:pointer;transition:all .2s;
+  }
+  .followup-banner__resolve-btn:hover{background:rgba(16,185,129,0.3);color:#ffffff;}
+  .followup-banner__resolve-btn:disabled{opacity:.5;cursor:not-allowed;}
+
+  /* Submit Button & Lock State */
+  .btn-submit{
+    width:100%;margin-top:26px;padding:16px;border:none;border-radius:14px;
+    background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#ffffff;
+    font-family:var(--font-body);font-weight:800;font-size:15px;letter-spacing:.03em;
+    text-transform:uppercase;cursor:pointer;box-shadow:0 8px 20px rgba(37,99,235,.4);
+    transition:all .3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+  .btn-submit:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 12px 25px rgba(37,99,235,.6);}
+  .btn-submit:active:not(:disabled){transform:translateY(1px) scale(.99);}
+  .btn-submit:disabled{background:rgba(51,65,85,0.5) !important;color:#64748b !important;cursor:not-allowed !important;box-shadow:none !important;}
+
+  /* Toast & Overlay */
+  .toast{
+    position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);padding:12px 18px;
+    border-radius:999px;background:var(--surface-2);border:1px solid var(--border);
+    color:var(--text);font-size:13px;font-weight:700;opacity:0;pointer-events:none;
+    transition:opacity .25s,transform .25s;z-index:200;box-shadow:0 14px 30px rgba(0,0,0,.6);
+    max-width:88%;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0);}
+  .toast.success{border-color:rgba(16,185,129,.5);color:#34d399;}
+  .toast.error{border-color:rgba(239,68,68,.5);color:#f87171;}
+
+  .loading-overlay{position:fixed;inset:0;background:rgba(3,7,18,.8);display:none;align-items:center;justify-content:center;z-index:300;backdrop-filter:blur(6px);}
+  .loading-overlay.show{display:flex;}
+  .spinner{width:36px;height:36px;border-radius:50%;border:3px solid rgba(59,130,246,.2);border-top-color:var(--blue);animation:spin .7s linear infinite;}
+
+  @keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="app">
+  <header class="topbar">
+    <div class="topbar__title">
+      <span class="topbar__eyebrow">Dairy Feed Ops</span>
+      <h1>P2H Alat Berat</h1>
+    </div>
+    <button class="icon-btn" id="refreshBtn" type="button" title="Segarkan data" aria-label="Segarkan data">⟳</button>
+  </header>
+
+  <nav class="tabbar" role="tablist">
+    <button class="tabbar__btn is-active" data-tab="input" role="tab" aria-selected="true" type="button">Input</button>
+    <button class="tabbar__btn" data-tab="riwayat" role="tab" aria-selected="false" type="button">Riwayat</button>
+    <button class="tabbar__btn" data-tab="jadwal" role="tab" aria-selected="false" type="button">Jadwal</button>
+    <button class="tabbar__btn" data-tab="greasing" role="tab" aria-selected="false" type="button">Greasing</button>
+    <button class="tabbar__btn" data-tab="trouble" role="tab" aria-selected="false" type="button">Trouble</button>
+    <button class="tabbar__btn" data-tab="servis" role="tab" aria-selected="false" type="button">Servis</button>
+    <button class="tabbar__btn" data-tab="request" role="tab" aria-selected="false" type="button">Request</button>
+    <button class="tabbar__btn" data-tab="rapor" role="tab" aria-selected="false" type="button">Rapor</button>
+    <span class="tabbar__indicator"></span>
+  </nav>
+
+  <div id="followupBanner" class="followup-banner" style="display:none;">
+    <div class="followup-banner__head" id="followupBannerHead">
+      <span class="followup-banner__icon">⚠️</span>
+      <span class="followup-banner__text" id="followupBannerText">Ada temuan P2H yang perlu tindak lanjut</span>
+      <span class="followup-banner__chevron">›</span>
+    </div>
+    <div class="followup-banner__list" id="followupBannerList"></div>
+  </div>
+
+  <main class="content">
+
+    <!-- TAB: INPUT (P2H) -->
+    <section id="tab-input" class="panel is-active">
+      <form id="p2hForm" novalidate>
+        <input type="hidden" name="formType" value="p2h">
+
+        <div class="field">
+          <label>Shift</label>
+          <div class="segmented" data-target="shiftInput">
+            <button type="button" class="segmented__opt is-active" data-value="Shift 1">Shift 1</button>
+            <button type="button" class="segmented__opt" data-value="Shift 2">Shift 2</button>
+            <button type="button" class="segmented__opt" data-value="Shift 3">Shift 3</button>
+          </div>
+          <input type="hidden" name="shift" id="shiftInput" value="Shift 1">
+        </div>
+
+        <div class="field">
+          <label for="operatorSelect">Nama Operator</label>
+          <div class="electric-border">
+            <select name="operator" id="operatorSelect" class="js-operator-select" required>
+              <option value="">Memuat data…</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="unitSelect">Unit Alat</label>
+            <div class="electric-border">
+              <select name="alat" id="unitSelect" class="js-unit-select" required>
+                <option value="">Memuat data…</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="hmInput">HM (Hour Meter)</label>
+            <div class="electric-border">
+              <input type="text" inputmode="decimal" name="hm" id="hmInput" class="hm-input" required placeholder="0,0">
+            </div>
+            <span class="field__hint" id="hmHint"></span>
+          </div>
+        </div>
+
+        <div class="checklist">
+          <div class="checklist__head">
+            <span>Checklist Pemeriksaan</span>
+            <span class="checklist__count" id="checklistCount"></span>
+          </div>
+          <div class="checklist__note">Wajib diperiksa satu per satu — tidak ada status default.</div>
+          <div id="checklistContainer"></div>
+        </div>
+
+        <div class="field">
+          <label for="catatanInput">Catatan</label>
+          <div class="electric-border">
+            <textarea name="catatan" id="catatanInput" rows="3" placeholder="Opsional — tulis temuan atau kondisi khusus"></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit" id="submitBtn" disabled>PILIH OPERATOR TERLEBIH DAHULU</button>
+      </form>
+    </section>
+
+    <!-- TAB: RIWAYAT -->
+    <section id="tab-riwayat" class="panel">
+      <div class="field filter-row">
+        <label for="historyFilter">Filter Unit</label>
+        <div class="electric-border">
+          <select id="historyFilter" class="js-unit-filter">
+            <option value="">Semua Unit</option>
+          </select>
+        </div>
+      </div>
+      <button type="button" class="btn-download-pdf" id="historyPdfBtn" data-jenis="p2h">📄 Unduh PDF Riwayat P2H (per Unit)</button>
+      <div id="historyList" class="history-list">
+        <p class="empty-state">Memuat riwayat…</p>
+      </div>
+    </section>
+
+    <!-- TAB: JADWAL SERVIS -->
+    <section id="tab-jadwal" class="panel">
+      <div id="jadwalList" class="jadwal-list">
+        <p class="empty-state">Memuat jadwal servis…</p>
+      </div>
+    </section>
+
+    <!-- TAB: GREASING & PENGECEKAN BERKALA (3 HARIAN) -->
+    <section id="tab-greasing" class="panel">
+      <div class="section-divider" style="margin-top:0;">
+        <span>Status Jadwal Greasing</span>
+      </div>
+      <div id="jadwalGreasingList" class="jadwal-list">
+        <p class="empty-state">Memuat jadwal greasing…</p>
+      </div>
+
+      <div class="section-divider">
+        <span>Catat Greasing / Pengecekan</span>
+      </div>
+      <form id="greasingForm" novalidate>
+        <input type="hidden" name="formType" value="greasing">
+
+        <div class="field">
+          <label for="greasingOperatorSelect">Petugas</label>
+          <div class="electric-border">
+            <select name="operator" id="greasingOperatorSelect" class="js-operator-select" required>
+              <option value="">Memuat data…</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="greasingUnitSelect">Unit Alat</label>
+            <div class="electric-border">
+              <select name="alat" id="greasingUnitSelect" class="js-unit-select" required>
+                <option value="">Memuat data…</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="greasingTanggalInput">Tanggal</label>
+            <div class="electric-border">
+              <input type="date" name="tanggalGreasing" id="greasingTanggalInput" required>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="greasingCatatanInput">Catatan</label>
+          <div class="electric-border">
+            <textarea name="catatan" id="greasingCatatanInput" rows="3" placeholder="Contoh: Greasing pin bucket & pengecekan baut roda — kondisi normal"></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit" id="greasingSubmitBtn" disabled>PILIH PETUGAS TERLEBIH DAHULU</button>
+      </form>
+
+      <div class="section-divider">
+        <span>History Greasing/Cek</span>
+        <div class="electric-border">
+          <select id="greasingFilter" class="js-unit-filter">
+            <option value="">Semua Unit</option>
+          </select>
+        </div>
+      </div>
+      <button type="button" class="btn-download-pdf" id="greasingPdfBtn" data-jenis="greasing">📄 Unduh PDF Riwayat Greasing (per Unit)</button>
+      <div id="greasingList" class="history-list">
+        <p class="empty-state">Memuat data greasing…</p>
+      </div>
+    </section>
+
+    <!-- TAB: LAPORAN TROUBLE -->
+    <section id="tab-trouble" class="panel">
+      <form id="troubleForm" novalidate>
+        <input type="hidden" name="formType" value="trouble">
+
+        <div class="field">
+          <label for="troubleOperatorSelect">Nama Operator</label>
+          <div class="electric-border">
+            <select name="operator" id="troubleOperatorSelect" class="js-operator-select" required>
+              <option value="">Memuat data…</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="troubleUnitSelect">Unit Alat</label>
+          <div class="electric-border">
+            <select name="alat" id="troubleUnitSelect" class="js-unit-select" required>
+              <option value="">Memuat data…</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="troubleDeskripsi">Deskripsi Masalah</label>
+          <div class="electric-border">
+            <textarea name="deskripsi" id="troubleDeskripsi" rows="4" placeholder="Kondisi kerusakan (Conveyor tidak bisa muter, Ban depan kiri bocor, dll)" required></textarea>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="troubleLokasi">Tempat Trouble (Lokasi)</label>
+          <div class="electric-border">
+            <input type="text" name="lokasi" id="troubleLokasi" placeholder="Contoh: Kandang 5, Area Feed, Belakang kandang 2, dll." required>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit" id="troubleSubmitBtn" disabled>PILIH OPERATOR TERLEBIH DAHULU</button>
+      </form>
+
+      <div class="section-divider">
+        <span>Riwayat Trouble</span>
+        <div class="electric-border">
+          <select id="troubleFilter" class="js-unit-filter">
+            <option value="">Semua Unit</option>
+          </select>
+        </div>
+      </div>
+      <div id="troubleList" class="history-list">
+        <p class="empty-state">Memuat data…</p>
+      </div>
+    </section>
+
+    <!-- TAB: SERVIS -->
+    <section id="tab-servis" class="panel">
+      <form id="servisForm" novalidate>
+        <input type="hidden" name="formType" value="history_servis">
+
+        <div class="field">
+          <label for="servisUnitSelect">Unit Alat</label>
+          <div class="electric-border">
+            <select name="alat" id="servisUnitSelect" class="js-unit-select" required>
+              <option value="">Memuat data…</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="servisHmInput">HM Servis</label>
+            <div class="electric-border">
+              <input type="text" inputmode="decimal" name="hmServis" id="servisHmInput" class="hm-input" required placeholder="0,0">
+            </div>
+          </div>
+          <div class="field">
+            <label for="servisTanggalInput">Tanggal Servis</label>
+            <div class="electric-border">
+              <input type="date" name="tanggalServis" id="servisTanggalInput" required>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="servisCatatanInput">Teknisi / Catatan Pekerjaan</label>
+          <div class="electric-border">
+            <textarea name="catatan" id="servisCatatanInput" rows="3" placeholder="Contoh: Mekanik Budi - Ganti oli mesin & filter hidrolik"></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit" id="servisSubmitBtn">SIMPAN RECORD SERVIS</button>
+      </form>
+
+      <div class="section-divider">
+        <span>History Total Servis</span>
+        <div class="electric-border">
+          <select id="servisFilter" class="js-unit-filter">
+            <option value="">Semua Unit</option>
+          </select>
+        </div>
+      </div>
+      <button type="button" class="btn-download-pdf" id="servisPdfBtn" data-jenis="servis">📄 Unduh PDF Riwayat Servis (per Unit)</button>
+      <div id="servisList" class="history-list">
+        <p class="empty-state">Memuat data servis…</p>
+      </div>
+    </section>
+
+    <!-- TAB: REQUEST SERVIS -->
+    <section id="tab-request" class="panel">
+      <form id="requestForm" novalidate>
+        <input type="hidden" name="formType" value="request">
+
+        <div class="field">
+          <label for="requestOperatorSelect">Pemohon (Operator / Mekanik)</label>
+          <div class="electric-border">
+            <select name="operator" id="requestOperatorSelect" class="js-operator-select" required>
+              <option value="">Memuat data…</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="requestUnitSelect">Unit Alat</label>
+          <div class="electric-border">
+            <select name="alat" id="requestUnitSelect" class="js-unit-select" required>
+              <option value="">Memuat data…</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="requestJenisInput">Jenis Servis</label>
+            <div class="electric-border">
+              <input type="text" name="jenisServis" id="requestJenisInput" required placeholder="Contoh: Servis 250 jam, Ganti oli & filter">
+            </div>
+          </div>
+          <div class="field">
+            <label for="requestHmInput">HM Saat Ini</label>
+            <div class="electric-border">
+              <input type="text" inputmode="decimal" name="hm" id="requestHmInput" class="hm-input" placeholder="0,0">
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="requestTanggalInput">Tanggal Diinginkan</label>
+          <div class="electric-border">
+            <input type="date" name="tanggalDiinginkan" id="requestTanggalInput" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="requestCatatanInput">Catatan Tambahan</label>
+          <div class="electric-border">
+            <textarea name="catatan" id="requestCatatanInput" rows="3" placeholder="Alasan pengajuan, kondisi unit, urgensi, dsb."></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit" id="requestSubmitBtn" disabled>PILIH PEMOHON TERLEBIH DAHULU</button>
+      </form>
+
+      <div class="section-divider">
+        <span>Riwayat Request Servis</span>
+        <div class="electric-border">
+          <select id="requestFilter" class="js-unit-filter">
+            <option value="">Semua Unit</option>
+          </select>
+        </div>
+      </div>
+      <div id="requestList" class="history-list">
+        <p class="empty-state">Memuat data request…</p>
+      </div>
+    </section>
+
+    <!-- TAB: RAPOR UNIT & OPERATOR -->
+    <section id="tab-rapor" class="panel">
+      <div class="field">
+        <label>Jenis Rapor</label>
+        <div class="segmented" data-target="raporJenisInput">
+          <button type="button" class="segmented__opt is-active" data-value="unit">Unit</button>
+          <button type="button" class="segmented__opt" data-value="operator">Operator</button>
+        </div>
+        <input type="hidden" id="raporJenisInput" value="unit">
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="raporBulanInput">Periode (Bulan)</label>
+          <div class="electric-border">
+            <input type="month" id="raporBulanInput">
+          </div>
+        </div>
+      </div>
+
+      <div class="section-divider" style="margin-top:22px;">
+        <span id="raporListLabel">Rapor Unit</span>
+      </div>
+      <div id="raporList" class="jadwal-list">
+        <p class="empty-state">Memuat rapor…</p>
+      </div>
+
+      <div class="section-divider" style="margin-top:28px;">
+        <span>Penilaian Supervisor</span>
+      </div>
+      <button type="button" class="btn-download-pdf" id="bukaPenilaianBtn"
+        style="background:rgba(139,92,246,0.15);border-color:rgba(139,92,246,0.4);color:#c4b5fd;">
+        🔒 Buka Form Penilaian (Khusus Supervisor)
+      </button>
+
+      <form id="penilaianForm" novalidate style="display:none;margin-top:16px;">
+        <input type="hidden" name="formType" value="penilaian_supervisor">
+        <input type="hidden" name="pin" id="penilaianPinInput">
+        <input type="hidden" name="periode" id="penilaianPeriodeInput">
+
+        <div class="field">
+          <label for="penilaianOperatorSelect">Operator yang Dinilai</label>
+          <div class="electric-border">
+            <select name="operator" id="penilaianOperatorSelect" class="js-operator-select" required>
+              <option value="">Memuat data…</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="penilaianPenilaiInput">Nama Penilai (Supervisor)</label>
+          <div class="electric-border">
+            <input type="text" name="penilai" id="penilaianPenilaiInput" placeholder="Nama Anda" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>1. Kepatuhan Keselamatan Kerja (K3 / Safety)</label>
+          <div class="segmented" data-target="penilaianK3Input">
+            <button type="button" class="segmented__opt" data-value="1">1</button>
+            <button type="button" class="segmented__opt" data-value="2">2</button>
+            <button type="button" class="segmented__opt is-active" data-value="3">3</button>
+            <button type="button" class="segmented__opt" data-value="4">4</button>
+            <button type="button" class="segmented__opt" data-value="5">5</button>
+          </div>
+          <input type="hidden" name="k3" id="penilaianK3Input" value="3">
+        </div>
+
+        <div class="field">
+          <label>2. Keterampilan Operasional (Technical Skill)</label>
+          <div class="segmented" data-target="penilaianKeterampilanInput">
+            <button type="button" class="segmented__opt" data-value="1">1</button>
+            <button type="button" class="segmented__opt" data-value="2">2</button>
+            <button type="button" class="segmented__opt is-active" data-value="3">3</button>
+            <button type="button" class="segmented__opt" data-value="4">4</button>
+            <button type="button" class="segmented__opt" data-value="5">5</button>
+          </div>
+          <input type="hidden" name="keterampilan" id="penilaianKeterampilanInput" value="3">
+        </div>
+
+        <div class="field">
+          <label>3. Tanggung Jawab Kebersihan &amp; Kondisi Alat</label>
+          <div class="segmented" data-target="penilaianKebersihanInput">
+            <button type="button" class="segmented__opt" data-value="1">1</button>
+            <button type="button" class="segmented__opt" data-value="2">2</button>
+            <button type="button" class="segmented__opt is-active" data-value="3">3</button>
+            <button type="button" class="segmented__opt" data-value="4">4</button>
+            <button type="button" class="segmented__opt" data-value="5">5</button>
+          </div>
+          <input type="hidden" name="kebersihan" id="penilaianKebersihanInput" value="3">
+        </div>
+
+        <div class="field">
+          <label>4. Kedisiplinan Waktu dan Kehadiran</label>
+          <div class="segmented" data-target="penilaianKedisiplinanInput">
+            <button type="button" class="segmented__opt" data-value="1">1</button>
+            <button type="button" class="segmented__opt" data-value="2">2</button>
+            <button type="button" class="segmented__opt is-active" data-value="3">3</button>
+            <button type="button" class="segmented__opt" data-value="4">4</button>
+            <button type="button" class="segmented__opt" data-value="5">5</button>
+          </div>
+          <input type="hidden" name="kedisiplinan" id="penilaianKedisiplinanInput" value="3">
+        </div>
+
+        <div class="field">
+          <label>5. Pengambilan Keputusan di Situasi Sulit (Problem Solving)</label>
+          <div class="segmented" data-target="penilaianProblemSolvingInput">
+            <button type="button" class="segmented__opt" data-value="1">1</button>
+            <button type="button" class="segmented__opt" data-value="2">2</button>
+            <button type="button" class="segmented__opt is-active" data-value="3">3</button>
+            <button type="button" class="segmented__opt" data-value="4">4</button>
+            <button type="button" class="segmented__opt" data-value="5">5</button>
+          </div>
+          <input type="hidden" name="problemSolving" id="penilaianProblemSolvingInput" value="3">
+        </div>
+
+        <div class="field">
+          <label for="penilaianCatatanInput">Catatan Tambahan (opsional)</label>
+          <div class="electric-border">
+            <textarea name="catatan" id="penilaianCatatanInput" rows="3" placeholder="Observasi, contoh kejadian, dsb."></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit" id="penilaianSubmitBtn" disabled>PILIH OPERATOR TERLEBIH DAHULU</button>
+      </form>
+    </section>
+
+  </main>
+</div>
+
+<div id="toast" class="toast"></div>
+<div id="loadingOverlay" class="loading-overlay"><div class="spinner"></div></div>
+
+<script>
+  // ================= CONFIG =================
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwKe1Ubox5Av_YqhtVFIbU_Ps7KzmRK9MIyEPFfcbp9n9Z69CSR5Qi8h0NwosNIQwMX/exec";
+
+  const CHECKLIST_ITEMS = [
+    "Oli Mesin", "Visual Fuel/Sensor/Seal", "Water Separator",
+    "Aki (Jamur +/-)", "Level Coolant", "Oli Transmisi",
+    "Visual Body (Ka, Ki, Bel)", "Kondisi Ban", "Lampu Alat"
+  ];
+
+  const SERVICE_WARNING_HM = 25;
+  const GREASING_WARNING_HARI = 1;
+
+  let unitsData = [];
+  let currentHistoryFilter = "";
+  let currentTroubleFilter = "";
+  let currentServisFilter = "";
+  let currentGreasingFilter = "";
+  let currentRequestFilter = "";
+
+  function parseHmNumber(val) {
+    if (val === undefined || val === null || val === "") return 0;
+    var str = String(val).trim().replace(',', '.');
+    return Number(str) || 0;
+  }
+
+  function setupHmAutoComma() {
+    document.querySelectorAll('.hm-input').forEach(inp => {
+      inp.addEventListener('input', (e) => {
+        let cursorPosition = inp.selectionStart;
+        let originalLen = inp.value.length;
+        inp.value = inp.value.replace(/\./g, ',');
+        let newLen = inp.value.length;
+        cursorPosition += (newLen - originalLen);
+        inp.setSelectionRange(cursorPosition, cursorPosition);
+      });
+    });
+  }
+
+  function setDefaultDate() {
+    const today = new Date().toISOString().split('T')[0];
+    const dateInp = document.getElementById('servisTanggalInput');
+    if (dateInp) dateInp.value = today;
+    const greasingDateInp = document.getElementById('greasingTanggalInput');
+    if (greasingDateInp) greasingDateInp.value = today;
+  }
+
+  // Parse tanggal format "dd/MM/yyyy" (hasil formatDateSafe backend) menjadi objek Date
+  function parseIdDate(str) {
+    if (!str) return null;
+    const m = String(str).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!m) return null;
+    const d = new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10));
+    d.setHours(0, 0, 0, 0);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    renderChecklist();
+    bindAllSegmented();
+    bindTabs();
+    bindP2HForm();
+    bindSimpleForm('troubleForm', 'troubleSubmitBtn', 'Laporan trouble berhasil dikirim', 'KIRIM LAPORAN TROUBLE');
+    bindSimpleForm('servisForm', 'servisSubmitBtn', 'Record servis berhasil disimpan');
+    bindSimpleForm('greasingForm', 'greasingSubmitBtn', 'Record greasing/cek berhasil disimpan', 'SIMPAN GREASING/CEK');
+    bindSimpleForm('penilaianForm', 'penilaianSubmitBtn', 'Penilaian supervisor berhasil disimpan', 'SIMPAN PENILAIAN');
+    bindSimpleForm('requestForm', 'requestSubmitBtn', 'Request servis berhasil diajukan', 'AJUKAN REQUEST SERVIS');
+    setupHmAutoComma();
+    setDefaultDate();
+    initRaporDefaults();
+    initFormDownloadButtons();
+    initHistoryDownloadButtons();
+
+    document.getElementById('refreshBtn').addEventListener('click', () => refreshAll(true));
+    document.getElementById('followupBannerHead').addEventListener('click', () => {
+      document.getElementById('followupBanner').classList.toggle('is-open');
+    });
+    document.getElementById('followupBannerList').addEventListener('click', e => {
+      const btn = e.target.closest('.followup-banner__resolve-btn');
+      if (!btn) return;
+      resolveFollowupItem(btn.dataset.rowindex, btn.dataset.unit, btn);
+    });
+
+    setupUnitHmHint('unitSelect', 'hmInput', 'hmHint');
+
+    document.getElementById('historyFilter').addEventListener('change', e => { currentHistoryFilter = e.target.value; loadHistory(); });
+    document.getElementById('troubleFilter').addEventListener('change', e => { currentTroubleFilter = e.target.value; loadTroubleHistory(); });
+    document.getElementById('servisFilter').addEventListener('change', e => { currentServisFilter = e.target.value; loadServisHistory(); });
+    document.getElementById('greasingFilter').addEventListener('change', e => { currentGreasingFilter = e.target.value; loadGreasingHistory(); });
+    document.getElementById('requestFilter').addEventListener('change', e => { currentRequestFilter = e.target.value; loadRequestHistory(); });
+
+    document.getElementById('operatorSelect').addEventListener('change', () => validateOperatorLock('operatorSelect', 'submitBtn', 'KIRIM LAPORAN'));
+    document.getElementById('troubleOperatorSelect').addEventListener('change', () => validateOperatorLock('troubleOperatorSelect', 'troubleSubmitBtn', 'KIRIM LAPORAN TROUBLE'));
+    document.getElementById('greasingOperatorSelect').addEventListener('change', () => validateOperatorLock('greasingOperatorSelect', 'greasingSubmitBtn', 'SIMPAN GREASING/CEK'));
+    document.getElementById('penilaianOperatorSelect').addEventListener('change', () => validateOperatorLock('penilaianOperatorSelect', 'penilaianSubmitBtn', 'SIMPAN PENILAIAN'));
+    document.getElementById('requestOperatorSelect').addEventListener('change', () => validateOperatorLock('requestOperatorSelect', 'requestSubmitBtn', 'AJUKAN REQUEST SERVIS'));
+
+    // Prevent selecting troubled unit in P2H tab
+    const p2hUnitSel = document.getElementById('unitSelect');
+    if (p2hUnitSel) {
+      p2hUnitSel.addEventListener('change', (e) => {
+        const val = e.target.value;
+        const u = unitsData.find(x => x.nama === val);
+        if (u && u.isTrouble) {
+          showToast('🚨 UNIT DALAM PENANGANAN TROUBLE! Unit ' + u.nama + ' belum diperbaiki (' + (u.troubleDesc || 'Trouble') + '). Tidak dapat dipilih untuk P2H.', 'error');
+          e.target.value = '';
+          const hint = document.getElementById('hmHint');
+          if (hint) {
+            hint.textContent = '⚠️ Unit diblokir karena status Trouble!';
+            hint.classList.add('is-warn');
+          }
+        }
+      });
+    }
+
+    refreshAll(false);
+  });
+
+  function validateOperatorLock(selectId, btnId, defaultText) {
+    const sel = document.getElementById(selectId);
+    const btn = document.getElementById(btnId);
+    if (!sel || !btn) return;
+
+    if (!sel.value || sel.value === "") {
+      btn.disabled = true;
+      btn.innerText = "PILIH OPERATOR TERLEBIH DAHULU";
+    } else {
+      btn.disabled = false;
+      btn.innerText = defaultText;
+    }
+  }
+
+  function refreshAll(announce) {
+    loadInitData();
+    loadHistory();
+    loadTroubleHistory();
+    loadServisHistory();
+    loadGreasingHistory();
+    loadRapor();
+    loadFollowupBanner();
+    loadRequestHistory();
+    if (announce) showToast('Data disegarkan', 'success');
+  }
+
+  function renderChecklist() {
+    const container = document.getElementById('checklistContainer');
+    container.innerHTML = '';
+    CHECKLIST_ITEMS.forEach((item, i) => {
+      const idx = i + 1;
+      const row = document.createElement('div');
+      row.className = 'check-item';
+      row.innerHTML =
+        '<span class="check-item__label"><span class="check-dot" data-dot></span>' + idx + '. ' + item + '</span>' +
+        '<div class="check-toggle">' +
+          '<button type="button" class="check-toggle__opt" data-value="OK">OK</button>' +
+          '<button type="button" class="check-toggle__opt" data-value="CHECK">CEK</button>' +
+        '</div>' +
+        '<input type="hidden" name="p' + idx + '" value="">';
+      container.appendChild(row);
+    });
+
+    container.querySelectorAll('.check-item').forEach(item => {
+      const hidden = item.querySelector('input[type="hidden"]');
+      const dot = item.querySelector('.check-dot');
+      const opts = item.querySelectorAll('.check-toggle__opt');
+      opts.forEach(btn => {
+        btn.addEventListener('click', () => {
+          hidden.value = btn.dataset.value;
+          opts.forEach(b => b.removeAttribute('data-active'));
+          btn.setAttribute('data-active', 'true');
+          dot.setAttribute('data-state', btn.dataset.value);
+          item.querySelector('.check-toggle').classList.remove('is-flagged');
+          updateChecklistCount();
+        });
+      });
+    });
+
+    updateChecklistCount();
+  }
+
+  function updateChecklistCount() {
+    const total = CHECKLIST_ITEMS.length;
+    const hiddenInputs = document.querySelectorAll('#checklistContainer input[type="hidden"]');
+    let belum = 0, cek = 0;
+    hiddenInputs.forEach(inp => {
+      if (inp.value === '') belum++;
+      else if (inp.value === 'CHECK') cek++;
+    });
+    const el = document.getElementById('checklistCount');
+    if (belum > 0) {
+      el.textContent = belum + ' belum diperiksa';
+      el.style.color = 'var(--red)';
+    } else if (cek > 0) {
+      el.textContent = cek + ' perlu dicek';
+      el.style.color = 'var(--amber)';
+    } else {
+      el.textContent = total + '/' + total + ' OK';
+      el.style.color = 'var(--green)';
+    }
+  }
+
+  function flagUnchecked() {
+    const items = document.querySelectorAll('#checklistContainer .check-item');
+    for (let i = 0; i < items.length; i++) {
+      const hidden = items[i].querySelector('input[type="hidden"]');
+      if (hidden.value === '') {
+        items[i].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const toggle = items[i].querySelector('.check-toggle');
+        toggle.classList.add('is-flagged');
+        setTimeout(() => toggle.classList.remove('is-flagged'), 1200);
+        break;
+      }
+    }
+  }
+
+  function bindAllSegmented() {
+    document.querySelectorAll('.segmented[data-target]').forEach(seg => {
+      const hidden = document.getElementById(seg.dataset.target);
+      seg.querySelectorAll('.segmented__opt').forEach(btn => {
+        btn.addEventListener('click', () => {
+          seg.querySelectorAll('.segmented__opt').forEach(b => b.classList.remove('is-active'));
+          btn.classList.add('is-active');
+          hidden.value = btn.dataset.value;
+        });
+      });
+    });
+  }
+
+  function resetSegmentedDefaults(form) {
+    form.querySelectorAll('.segmented[data-target]').forEach(seg => {
+      const hidden = document.getElementById(seg.dataset.target);
+      seg.querySelectorAll('.segmented__opt').forEach(btn => {
+        btn.classList.toggle('is-active', btn.dataset.value === hidden.value);
+      });
+    });
+  }
+
+  function bindTabs() {
+    const buttons = Array.from(document.querySelectorAll('.tabbar__btn'));
+    const indicator = document.querySelector('.tabbar__indicator');
+    const panels = {
+      input: document.getElementById('tab-input'),
+      riwayat: document.getElementById('tab-riwayat'),
+      jadwal: document.getElementById('tab-jadwal'),
+      greasing: document.getElementById('tab-greasing'),
+      trouble: document.getElementById('tab-trouble'),
+      servis: document.getElementById('tab-servis'),
+      request: document.getElementById('tab-request'),
+      rapor: document.getElementById('tab-rapor')
+    };
+
+    function activate(tabName, btn) {
+      buttons.forEach(b => { b.classList.remove('is-active'); b.setAttribute('aria-selected', 'false'); });
+      btn.classList.add('is-active');
+      btn.setAttribute('aria-selected', 'true');
+      Object.values(panels).forEach(p => p.classList.remove('is-active'));
+      if (panels[tabName]) panels[tabName].classList.add('is-active');
+      indicator.style.left = btn.offsetLeft + 'px';
+      indicator.style.width = btn.offsetWidth + 'px';
+      btn.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+    }
+
+    buttons.forEach(btn => btn.addEventListener('click', () => activate(btn.dataset.tab, btn)));
+    window.addEventListener('resize', () => {
+      const active = buttons.find(b => b.classList.contains('is-active'));
+      if (active) { indicator.style.left = active.offsetLeft + 'px'; indicator.style.width = active.offsetWidth + 'px'; }
+    });
+    requestAnimationFrame(() => activate('input', buttons[0]));
+  }
+
+  function loadInitData() {
+    fetch(SCRIPT_URL + '?action=getInitData')
+      .then(res => res.json())
+      .then(data => {
+        unitsData = data.units || [];
+        const operators = data.operators || [];
+
+        document.querySelectorAll('.js-operator-select').forEach(sel => {
+          const prev = sel.value;
+          sel.innerHTML = '<option value="">— Pilih Operator —</option>' +
+            operators.map(op => '<option value="' + escapeHtml(op) + '">' + escapeHtml(op) + '</option>').join('');
+          if (prev) sel.value = prev;
+        });
+
+        // Unit dropdown for P2H (Input) - mark troubled units
+        const p2hSel = document.getElementById('unitSelect');
+        if (p2hSel) {
+          const prev = p2hSel.value;
+          p2hSel.innerHTML = '<option value="">— Pilih Unit —</option>' +
+            unitsData.map(u => {
+              const label = u.isTrouble ? ('🚨 [TROUBLE] ' + escapeHtml(u.nama)) : escapeHtml(u.nama);
+              return '<option value="' + escapeHtml(u.nama) + '">' + label + '</option>';
+            }).join('');
+          if (prev) p2hSel.value = prev;
+        }
+
+        // Unit dropdowns for other tabs (Trouble, Servis, Filter)
+        document.querySelectorAll('.js-unit-select:not(#unitSelect)').forEach(sel => {
+          const prev = sel.value;
+          sel.innerHTML = '<option value="">— Pilih Unit —</option>' +
+            unitsData.map(u => '<option value="' + escapeHtml(u.nama) + '">' + escapeHtml(u.nama) + '</option>').join('');
+          if (prev) sel.value = prev;
+        });
+
+        document.querySelectorAll('.js-unit-filter').forEach(sel => {
+          const prev = sel.value;
+          sel.innerHTML = '<option value="">Semua Unit</option>' +
+            unitsData.map(u => '<option value="' + escapeHtml(u.nama) + '">' + escapeHtml(u.nama) + '</option>').join('');
+          sel.value = prev;
+        });
+
+        renderJadwalServis();
+        renderJadwalGreasing();
+
+        validateOperatorLock('operatorSelect', 'submitBtn', 'KIRIM LAPORAN');
+        validateOperatorLock('troubleOperatorSelect', 'troubleSubmitBtn', 'KIRIM LAPORAN TROUBLE');
+        validateOperatorLock('greasingOperatorSelect', 'greasingSubmitBtn', 'SIMPAN GREASING/CEK');
+        validateOperatorLock('penilaianOperatorSelect', 'penilaianSubmitBtn', 'SIMPAN PENILAIAN');
+        validateOperatorLock('requestOperatorSelect', 'requestSubmitBtn', 'AJUKAN REQUEST SERVIS');
+      })
+      .catch(() => showToast('Gagal memuat data operator/unit', 'error'));
+  }
+
+  function setupUnitHmHint(unitSelectId, hmInputId, hintId) {
+    const unitSel = document.getElementById(unitSelectId);
+    const hmInp = document.getElementById(hmInputId);
+    const hint = document.getElementById(hintId);
+    if (!unitSel || !hmInp || !hint) return;
+
+    function showBase() {
+      const u = unitsData.find(x => x.nama === unitSel.value);
+      if (u && u.isTrouble) {
+        hint.textContent = '⚠️ Unit diblokir karena status Trouble!';
+        hint.classList.add('is-warn');
+        return;
+      }
+      hint.classList.remove('is-warn');
+      hint.textContent = u ? ('HM terakhir tercatat: ' + formatNumber(u.hmSaatIni)) : '';
+    }
+
+    unitSel.addEventListener('change', showBase);
+    hmInp.addEventListener('input', () => {
+      const u = unitsData.find(x => x.nama === unitSel.value);
+      const val = parseHmNumber(hmInp.value);
+      if (!u || isNaN(val)) return;
+      if (val < parseHmNumber(u.hmSaatIni)) {
+        hint.textContent = '⚠ Lebih kecil dari HM terakhir (' + formatNumber(u.hmSaatIni) + ')';
+        hint.classList.add('is-warn');
+      } else {
+        hint.textContent = 'HM terakhir tercatat: ' + formatNumber(u.hmSaatIni);
+        hint.classList.remove('is-warn');
+      }
+    });
+  }
+
+  function loadHistory() {
+    const list = document.getElementById('historyList');
+    list.innerHTML = '<p class="empty-state">Memuat riwayat…</p>';
+    const url = SCRIPT_URL + '?action=getHistory&unit=' + encodeURIComponent(currentHistoryFilter) + '&limit=30';
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        const rows = data.rows || [];
+        list.innerHTML = rows.length === 0
+          ? '<p class="empty-state">Belum ada riwayat untuk unit ini.</p>'
+          : rows.map(renderHistoryCard).join('');
+      })
+      .catch(() => { list.innerHTML = '<p class="empty-state">Gagal memuat riwayat.</p>'; });
+  }
+
+  function quickReportTrouble(unit, operator, hm, catatan, issuesText) {
+    const troubleBtn = document.querySelector('.tabbar__btn[data-tab="trouble"]');
+    if (troubleBtn) troubleBtn.click();
+
+    const unitSel = document.getElementById('troubleUnitSelect');
+    const opSel = document.getElementById('troubleOperatorSelect');
+    const deskInp = document.getElementById('troubleDeskripsi');
+
+    if (unitSel) unitSel.value = unit;
+    if (opSel) opSel.value = operator;
+
+    let autoDesc = "";
+    if (issuesText && issuesText.trim() !== "") {
+      autoDesc += "Item Cek: " + issuesText + ". ";
+    }
+    if (catatan && catatan.trim() !== "") {
+      autoDesc += "Catatan Operator: \"" + catatan + "\".";
+    }
+
+    if (deskInp) deskInp.value = autoDesc.trim();
+
+    validateOperatorLock('troubleOperatorSelect', 'troubleSubmitBtn', 'KIRIM LAPORAN TROUBLE');
+
+    showToast('Form Trouble otomatis diisi dari Riwayat P2H', 'success');
+  }
+
+  function renderHistoryCard(row) {
+    const checklist = row.checklist || [];
+    const issues = [];
+    checklist.forEach((val, i) => { if (val === 'CHECK') issues.push(CHECKLIST_ITEMS[i]); });
+    const issueChip = issues.length === 0
+      ? '<span class="chip chip--ok">Semua OK</span>'
+      : '<span class="chip chip--warn">' + issues.length + ' perlu dicek</span>';
+
+    const detailRows = CHECKLIST_ITEMS.map((item, i) => {
+      const val = checklist[i] || '-';
+      const warnClass = val === 'CHECK' ? ' is-warn' : '';
+      return '<div class="h-detail-item' + warnClass + '"><span>' + escapeHtml(item) + '</span><span>' + escapeHtml(val) + '</span></div>';
+    }).join('');
+
+    const hasIssueOrNote = issues.length > 0 || (row.catatan && row.catatan.trim() !== "");
+    const safeUnit = escapeHtml(row.unit || '');
+    const safeOp = escapeHtml(row.operator || '');
+    const safeHm = formatNumber(row.hm);
+    const safeCatatan = escapeHtml(row.catatan || '');
+    const safeIssues = escapeHtml(issues.join(', '));
+
+    const quickBtn = hasIssueOrNote 
+      ? `<button type="button" class="btn-quick-trouble" onclick="quickReportTrouble('${safeUnit}', '${safeOp}', '${safeHm}', '${safeCatatan}', '${safeIssues}')">⚡ Laporkan Trouble ke Mekanik</button>`
+      : '';
+
+    return (
+      '<div class="h-card">' +
+        '<div class="h-card__top">' +
+          '<span class="h-card__unit">' + safeUnit + '</span>' +
+          '<span class="h-card__time">' + escapeHtml(row.timestamp || '') + '</span>' +
+        '</div>' +
+        '<div class="h-card__meta">' +
+          '<span class="chip">' + escapeHtml(row.shift || '-') + '</span>' +
+          '<span class="chip">' + safeOp + '</span>' +
+          '<span class="chip chip--hm">' + safeHm + ' HM</span>' +
+          issueChip +
+        '</div>' +
+        (row.catatan ? '<div class="h-card__note">"' + safeCatatan + '"</div>' : '') +
+        '<details><summary>Lihat detail checklist</summary><div class="h-detail-grid">' + detailRows + '</div></details>' +
+        quickBtn +
+      '</div>'
+    );
+  }
+
+  function loadTroubleHistory() {
+    const list = document.getElementById('troubleList');
+    list.innerHTML = '<p class="empty-state">Memuat data…</p>';
+    const url = SCRIPT_URL + '?action=getTroubleHistory&unit=' + encodeURIComponent(currentTroubleFilter) + '&limit=20';
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        const rows = data.rows || [];
+        list.innerHTML = rows.length === 0
+          ? '<p class="empty-state">Belum ada laporan trouble.</p>'
+          : rows.map(renderTroubleCard).join('');
+      })
+      .catch(() => { list.innerHTML = '<p class="empty-state">Gagal memuat data.</p>'; });
+  }
+
+  function renderTroubleCard(row) {
+    const safeLokasi = escapeHtml(row.lokasi || row.tempatTrouble || row.tempat || '-');
+    const safeUnit = escapeHtml(row.unit || '-');
+    const safeTs = escapeHtml(row.timestamp || '');
+    const statusText = (row.status || 'Baru').trim();
+    const isDone = statusText.toLowerCase() === 'selesai' || statusText.toLowerCase() === 'done';
+
+    const actionButton = !isDone
+      ? `<button type="button" class="btn-resolve-trouble" onclick="confirmTroubleResolved('${safeUnit}', '${safeTs}')">✅ Konfirmasi Sudah Diperbaiki</button>`
+      : '';
+
+    return (
+      '<div class="h-card">' +
+        '<div class="h-card__top">' +
+          '<span class="h-card__unit">' + safeUnit + '</span>' +
+          '<span class="h-card__time">' + safeTs + '</span>' +
+        '</div>' +
+        '<div class="h-card__meta">' +
+          '<span class="chip">' + escapeHtml(row.operator || '-') + '</span>' +
+          '<span class="chip ' + statusChipClass(row.status) + '">' + escapeHtml(statusText) + '</span>' +
+          '<span class="chip chip--warn">📍 Tempat: ' + safeLokasi + '</span>' +
+        '</div>' +
+        (row.deskripsi ? '<div class="h-card__note">"' + escapeHtml(row.deskripsi) + '"</div>' : '') +
+        actionButton +
+      '</div>'
+    );
+  }
+
+  function confirmTroubleResolved(unit, timestamp) {
+    if (!confirm('Apakah unit ' + unit + ' sudah selesai diperbaiki dan siap beroperasi kembali?')) return;
+
+    setLoading(true);
+    const fd = new FormData();
+    fd.append('formType', 'resolve_trouble');
+    fd.append('unit', unit);
+    fd.append('timestamp', timestamp);
+
+    fetch(SCRIPT_URL, { method: 'POST', body: fd })
+      .then(res => res.json())
+      .then(res => {
+        setLoading(false);
+        if (res.result === 'success') {
+          showToast('✅ Status trouble ' + unit + ' berhasil diubah menjadi Selesai!', 'success');
+          refreshAll(false);
+        } else {
+          showToast(res.message || 'Gagal memperbarui status trouble.', 'error');
+        }
+      })
+      .catch(() => {
+        setLoading(false);
+        showToast('Gagal terhubung ke server', 'error');
+      });
+  }
+
+  function statusChipClass(status) {
+    const s = (status || '').trim().toLowerCase();
+    if (s === 'baru') return 'chip--danger';
+    if (s === 'menunggu') return 'chip--warn';
+    if (s === 'diproses' || s === 'dijadwalkan') return 'chip--info';
+    if (s === 'selesai' || s === 'done') return 'chip--ok';
+    return '';
+  }
+
+  function loadRequestHistory() {
+    const list = document.getElementById('requestList');
+    list.innerHTML = '<p class="empty-state">Memuat data request…</p>';
+    const url = SCRIPT_URL + '?action=getRequestHistory&unit=' + encodeURIComponent(currentRequestFilter) + '&limit=30';
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        const rows = data.rows || [];
+        list.innerHTML = rows.length === 0
+          ? '<p class="empty-state">Belum ada request servis untuk unit ini.</p>'
+          : rows.map(renderRequestCard).join('');
+      })
+      .catch(() => { list.innerHTML = '<p class="empty-state">Gagal memuat data request.</p>'; });
+  }
+
+  function renderRequestCard(row) {
+    const safeUnit = escapeHtml(row.unit || '-');
+    const safeTs = escapeHtml(row.timestamp || '');
+    const statusText = (row.status || 'Menunggu').trim();
+    const isDone = statusText.toLowerCase() === 'selesai' || statusText.toLowerCase() === 'done';
+
+    const actionButton = !isDone
+      ? `<button type="button" class="btn-resolve-trouble" onclick="confirmRequestResolved('${safeUnit}', '${safeTs}')">✅ Tandai Selesai Diservis</button>`
+      : '';
+
+    return (
+      '<div class="h-card">' +
+        '<div class="h-card__top">' +
+          '<span class="h-card__unit">' + safeUnit + '</span>' +
+          '<span class="h-card__time">' + safeTs + '</span>' +
+        '</div>' +
+        '<div class="h-card__meta">' +
+          '<span class="chip">👤 ' + escapeHtml(row.operator || '-') + '</span>' +
+          '<span class="chip ' + statusChipClass(row.status) + '">' + escapeHtml(statusText) + '</span>' +
+          '<span class="chip chip--warn">🔧 ' + escapeHtml(row.jenisServis || '-') + '</span>' +
+          (row.tanggalDiinginkan ? '<span class="chip">📅 Diinginkan: ' + escapeHtml(row.tanggalDiinginkan) + '</span>' : '') +
+          (row.hm ? '<span class="chip">⏱️ HM: ' + escapeHtml(row.hm) + '</span>' : '') +
+        '</div>' +
+        (row.catatan ? '<div class="h-card__note">"' + escapeHtml(row.catatan) + '"</div>' : '') +
+        actionButton +
+      '</div>'
+    );
+  }
+
+  function confirmRequestResolved(unit, timestamp) {
+    if (!confirm('Tandai request servis unit ' + unit + ' sebagai SELESAI diservis?')) return;
+
+    setLoading(true);
+    const fd = new FormData();
+    fd.append('formType', 'resolve_request');
+    fd.append('unit', unit);
+    fd.append('timestamp', timestamp);
+
+    fetch(SCRIPT_URL, { method: 'POST', body: fd })
+      .then(res => res.json())
+      .then(res => {
+        setLoading(false);
+        if (res.result === 'success') {
+          showToast('✅ Request servis ' + unit + ' berhasil ditandai Selesai!', 'success');
+          refreshAll(false);
+        } else {
+          showToast(res.message || 'Gagal memperbarui status request.', 'error');
+        }
+      })
+      .catch(() => {
+        setLoading(false);
+        showToast('Gagal terhubung ke server', 'error');
+      });
+  }
+
+  function loadServisHistory() {
+    const list = document.getElementById('servisList');
+    list.innerHTML = '<p class="empty-state">Memuat data servis…</p>';
+    const url = SCRIPT_URL + '?action=getServisHistory&unit=' + encodeURIComponent(currentServisFilter) + '&limit=30';
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        const rows = data.rows || [];
+        list.innerHTML = rows.length === 0
+          ? '<p class="empty-state">Belum ada riwayat servis untuk unit ini.</p>'
+          : rows.map(renderServisCard).join('');
+      })
+      .catch(() => { list.innerHTML = '<p class="empty-state">Gagal memuat data servis.</p>'; });
+  }
+
+  function renderServisCard(row) {
+    return (
+      '<div class="h-card">' +
+        '<div class="h-card__top">' +
+          '<span class="h-card__unit">' + escapeHtml(row.unit || '-') + '</span>' +
+          '<span class="h-card__time">' + escapeHtml(row.timestamp || '') + '</span>' +
+        '</div>' +
+        '<div class="h-card__meta">' +
+          '<span class="chip chip--hm">🛠️ HM Servis: ' + formatNumber(row.hmServis) + '</span>' +
+          '<span class="chip chip--ok">📅 Tgl: ' + escapeHtml(row.tanggalServis || '-') + '</span>' +
+        '</div>' +
+        (row.catatan ? '<div class="h-card__note">"' + escapeHtml(row.catatan) + '"</div>' : '') +
+      '</div>'
+    );
+  }
+
+  function renderJadwalServis() {
+    const list = document.getElementById('jadwalList');
+    if (unitsData.length === 0) {
+      list.innerHTML = '<p class="empty-state">Belum ada data unit.</p>';
+      return;
+    }
+
+    const computed = unitsData.map(u => {
+      const interval = parseHmNumber(u.interval || u.Interval_HM_Servis);
+      const lastHM = parseHmNumber(u.hmServisTerakhir || u.HM_Servis_Terakhir);
+      const currentHM = parseHmNumber(u.hmSaatIni || u.HM_Saat_Ini);
+      const hasOverride = u.overrideHM !== '' && u.overrideHM !== null && u.overrideHM !== undefined;
+      const overrideHM = hasOverride ? parseHmNumber(u.overrideHM) : null;
+
+      let status, nextHM, remaining, progress;
+      if (interval <= 0 && !hasOverride) {
+        status = 'BELUM_DIATUR';
+        nextHM = null; remaining = null; progress = 0;
+      } else {
+        nextHM = overrideHM !== null ? overrideHM : (lastHM + interval);
+        remaining = nextHM - currentHM;
+        status = remaining <= 0 ? 'OVERDUE' : (remaining <= SERVICE_WARNING_HM ? 'SEGERA' : 'AMAN');
+        progress = interval > 0 ? Math.min(100, Math.max(0, ((currentHM - lastHM) / interval) * 100)) : (status === 'OVERDUE' ? 100 : 0);
+      }
+      return Object.assign({}, u, { interval, lastHM, currentHM, nextHM, remaining, status, progress });
+    });
+
+    const order = { OVERDUE: 0, SEGERA: 1, AMAN: 2, BELUM_DIATUR: 3 };
+    computed.sort((a, b) => order[a.status] - order[b.status] || (a.remaining ?? 0) - (b.remaining ?? 0));
+
+    list.innerHTML = computed.map(u => {
+      const remainingBlock = u.status === 'BELUM_DIATUR'
+        ? '<div>Interval servis<b>Belum diatur</b></div><div>Servis terakhir<b>' + (u.lastHM ? formatNumber(u.lastHM) + ' HM' : '-') + '</b></div>'
+        : '<div>Interval servis<b>' + formatNumber(u.interval) + ' HM</b></div>' +
+          '<div>Servis terakhir<b>' + (u.lastHM ? formatNumber(u.lastHM) + ' HM' : '-') + '</b></div>' +
+          '<div>Tanggal servis terakhir<b>' + (u.tglServisTerakhir || '-') + '</b></div>' +
+          '<div>' + (u.remaining <= 0 ? 'Terlambat' : 'Sisa menuju servis') + '<b>' + formatNumber(Math.abs(u.remaining)) + ' HM</b></div>';
+
+      return (
+        '<div class="j-card" data-status="' + u.status + '">' +
+          '<div class="j-card__top">' +
+            '<span class="j-card__unit">' + escapeHtml(u.nama) + '</span>' +
+            '<span class="status-badge" data-status="' + u.status + '">' + statusLabel(u.status) + '</span>' +
+          '</div>' +
+          '<div class="j-card__hm">' + formatNumber(u.currentHM) + '</div>' +
+          '<div class="j-card__hm-label">HM saat ini</div>' +
+          '<div class="gauge"><div class="gauge__fill" data-status="' + u.status + '" style="width:' + u.progress + '%"></div></div>' +
+          '<div class="j-card__details">' + remainingBlock + '</div>' +
+          (u.overrideTgl ? '<div class="h-card__note">Jadwal manual: ' + escapeHtml(u.overrideTgl) + '</div>' : '') +
+          '<button type="button" class="btn-download-pdf" data-form="servis" data-unit="' + escapeHtml(u.nama) + '">📄 Unduh Form Pengajuan Servis</button>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  function statusLabel(s) {
+    if (s === 'OVERDUE') return 'Servis Terlambat';
+    if (s === 'SEGERA') return 'Segera Servis';
+    if (s === 'AMAN') return 'Aman';
+    return 'Belum Diatur';
+  }
+
+  function greasingStatusLabel(s) {
+    if (s === 'OVERDUE') return 'Terlambat';
+    if (s === 'SEGERA') return 'Segera';
+    if (s === 'AMAN') return 'Aman';
+    return 'Belum Diatur';
+  }
+
+  function renderJadwalGreasing() {
+    const list = document.getElementById('jadwalGreasingList');
+    if (unitsData.length === 0) {
+      list.innerHTML = '<p class="empty-state">Belum ada data unit.</p>';
+      return;
+    }
+
+    const computed = unitsData.map(u => {
+      const interval = parseInt(u.intervalHariGreasing, 10) || 3;
+      const lastDate = parseIdDate(u.tglGreasingTerakhir);
+      const overrideDate = parseIdDate(u.overrideTglGreasing);
+
+      let nextDate = null, remaining = null, status = 'BELUM_DIATUR', progress = 0;
+      if (overrideDate) {
+        nextDate = overrideDate;
+      } else if (lastDate) {
+        nextDate = new Date(lastDate.getTime());
+        nextDate.setDate(nextDate.getDate() + interval);
+      }
+
+      if (nextDate) {
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        remaining = Math.round((nextDate.getTime() - today.getTime()) / 86400000);
+        status = remaining <= 0 ? 'OVERDUE' : (remaining <= GREASING_WARNING_HARI ? 'SEGERA' : 'AMAN');
+        if (lastDate) {
+          const elapsed = interval - remaining;
+          progress = Math.min(100, Math.max(0, (elapsed / interval) * 100));
+        } else {
+          progress = status === 'OVERDUE' ? 100 : 0;
+        }
+      }
+
+      return Object.assign({}, u, { interval, nextDate, remaining, status, progress });
+    });
+
+    const order = { OVERDUE: 0, SEGERA: 1, AMAN: 2, BELUM_DIATUR: 3 };
+    computed.sort((a, b) => order[a.status] - order[b.status] || (a.remaining ?? 0) - (b.remaining ?? 0));
+
+    list.innerHTML = computed.map(u => {
+      const remainingText = u.remaining === null ? '-' :
+        (u.remaining <= 0 ? Math.abs(u.remaining) + ' hari lalu' : u.remaining + ' hari lagi');
+
+      const detailsBlock = u.status === 'BELUM_DIATUR'
+        ? '<div>Interval<b>' + u.interval + ' hari</b></div><div>Terakhir dicatat<b>' + (u.tglGreasingTerakhir || 'Belum pernah') + '</b></div>'
+        : '<div>Interval<b>' + u.interval + ' hari</b></div>' +
+          '<div>Terakhir dicatat<b>' + (u.tglGreasingTerakhir || '-') + '</b></div>' +
+          '<div>Jadwal berikutnya<b>' + (u.tglGreasingTerakhir ? formatDateOnly(u.nextDate) : '-') + '</b></div>' +
+          '<div>' + (u.remaining <= 0 ? 'Terlambat' : 'Sisa waktu') + '<b>' + remainingText + '</b></div>' +
+          '<div>PIC Terakhir<b>' + (u.picGreasing ? escapeHtml(u.picGreasing) : '-') + '</b></div>';
+
+      return (
+        '<div class="j-card" data-status="' + u.status + '">' +
+          '<div class="j-card__top">' +
+            '<span class="j-card__unit">' + escapeHtml(u.nama) + '</span>' +
+            '<span class="status-badge" data-status="' + u.status + '">' + greasingStatusLabel(u.status) + '</span>' +
+          '</div>' +
+          '<div class="j-card__hm">' + (u.status === 'BELUM_DIATUR' ? '—' : remainingText) + '</div>' +
+          '<div class="j-card__hm-label">' + (u.status === 'BELUM_DIATUR' ? 'Belum pernah dicatat' : 'Menuju jadwal berikutnya') + '</div>' +
+          '<div class="gauge"><div class="gauge__fill" data-status="' + u.status + '" style="width:' + u.progress + '%"></div></div>' +
+          '<div class="j-card__details">' + detailsBlock + '</div>' +
+          (u.overrideTglGreasing ? '<div class="h-card__note">Jadwal manual: ' + escapeHtml(u.overrideTglGreasing) + '</div>' : '') +
+          ((u.status === 'OVERDUE' || u.status === 'SEGERA')
+            ? '<button type="button" class="btn-download-pdf" data-form="grease" data-unit="' + escapeHtml(u.nama) + '">📄 Unduh Form Pengajuan Grease</button>'
+            : '') +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  function formatDateOnly(dateObj) {
+    if (!dateObj) return '-';
+    const dd = String(dateObj.getDate()).padStart(2, '0');
+    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const yyyy = dateObj.getFullYear();
+    return dd + '/' + mm + '/' + yyyy;
+  }
+
+  function loadGreasingHistory() {
+    const list = document.getElementById('greasingList');
+    list.innerHTML = '<p class="empty-state">Memuat data greasing…</p>';
+    const url = SCRIPT_URL + '?action=getGreasingHistory&unit=' + encodeURIComponent(currentGreasingFilter) + '&limit=30';
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        const rows = data.rows || [];
+        list.innerHTML = rows.length === 0
+          ? '<p class="empty-state">Belum ada riwayat greasing/pengecekan untuk unit ini.</p>'
+          : rows.map(renderGreasingCard).join('');
+      })
+      .catch(() => { list.innerHTML = '<p class="empty-state">Gagal memuat data greasing.</p>'; });
+  }
+
+  function renderGreasingCard(row) {
+    return (
+      '<div class="h-card">' +
+        '<div class="h-card__top">' +
+          '<span class="h-card__unit">' + escapeHtml(row.unit || '-') + '</span>' +
+          '<span class="h-card__time">' + escapeHtml(row.timestamp || '') + '</span>' +
+        '</div>' +
+        '<div class="h-card__meta">' +
+          '<span class="chip chip--ok">📅 Tgl: ' + escapeHtml(row.tanggalGreasing || '-') + '</span>' +
+          '<span class="chip">👤 ' + escapeHtml(row.petugas || '-') + '</span>' +
+        '</div>' +
+        (row.catatan && row.catatan !== '-' ? '<div class="h-card__note">"' + escapeHtml(row.catatan) + '"</div>' : '') +
+      '</div>'
+    );
+  }
+
+  /* ================= RAPOR UNIT & OPERATOR ================= */
+
+  function initRaporDefaults() {
+    const bulanInp = document.getElementById('raporBulanInput');
+    if (bulanInp) {
+      const now = new Date();
+      bulanInp.value = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+      bulanInp.addEventListener('change', () => loadRapor());
+    }
+    document.querySelectorAll('#tab-rapor .segmented__opt').forEach(btn => {
+      btn.addEventListener('click', () => loadRapor());
+    });
+
+    document.getElementById('raporList').addEventListener('click', e => {
+      const btn = e.target.closest('.btn-download-pdf');
+      if (!btn) return;
+      downloadRaporPdf(btn.dataset.type, btn.dataset.target, { start: btn.dataset.start, end: btn.dataset.end }, btn);
+    });
+
+    // Form Penilaian Supervisor terkunci di balik PIN (validasi asli tetap di server).
+    // PIN disimpan sementara di memori supaya supervisor bisa menilai beberapa
+    // operator berturut-turut tanpa mengetik ulang PIN setiap submit.
+    const bukaBtn = document.getElementById('bukaPenilaianBtn');
+    const penilaianForm = document.getElementById('penilaianForm');
+    let currentSupervisorPin = '';
+
+    bukaBtn.addEventListener('click', () => {
+      const pin = prompt('Masukkan PIN Supervisor:');
+      if (pin === null || pin.trim() === '') return;
+      currentSupervisorPin = pin.trim();
+      document.getElementById('penilaianPinInput').value = currentSupervisorPin;
+      document.getElementById('penilaianPeriodeInput').value = document.getElementById('raporBulanInput').value;
+      penilaianForm.style.display = 'block';
+      bukaBtn.style.display = 'none';
+    });
+
+    penilaianForm.addEventListener('reset', () => {
+      setTimeout(() => {
+        document.getElementById('penilaianPinInput').value = currentSupervisorPin;
+        document.getElementById('penilaianPeriodeInput').value = document.getElementById('raporBulanInput').value;
+      }, 0);
+    });
+  }
+
+  function loadFollowupBanner() {
+    const banner = document.getElementById('followupBanner');
+    fetch(SCRIPT_URL + '?action=getP2HFollowupList')
+      .then(res => res.json())
+      .then(data => {
+        const rows = data.rows || [];
+        if (rows.length === 0) {
+          banner.style.display = 'none';
+          return;
+        }
+        document.getElementById('followupBannerText').textContent =
+          rows.length + ' unit dengan temuan P2H (>5 jam) belum ditindaklanjuti ke mekanik';
+        document.getElementById('followupBannerList').innerHTML = rows.map(r =>
+          '<div class="followup-banner__item">' +
+            '<b>' + escapeHtml(r.unit) + ' — ' + r.jamLalu + ' jam lalu</b>' +
+            'Dilaporkan ' + escapeHtml(r.operator) + ' pada ' + escapeHtml(r.timestamp) +
+            (r.flaggedItems && r.flaggedItems.length ? '<br>Item bermasalah: ' + escapeHtml(r.flaggedItems.join(', ')) : '') +
+            (r.catatan ? '<br>"' + escapeHtml(r.catatan) + '"' : '') +
+            '<button type="button" class="followup-banner__resolve-btn" data-rowindex="' + r.rowIndex + '" data-unit="' + escapeHtml(r.unit) + '">✅ Tandai Sudah Diperbaiki</button>' +
+          '</div>'
+        ).join('');
+        banner.style.display = 'block';
+      })
+      .catch(() => { /* diam saja jika gagal, tidak mengganggu UX utama */ });
+  }
+
+  function resolveFollowupItem(rowIndex, unit, btn) {
+    const resolvedBy = prompt('Data ' + unit + ' akan ditandai SUDAH DIPERBAIKI/DIVALIDASI.\nMasukkan nama Anda (mekanik/supervisor):');
+    if (resolvedBy === null || resolvedBy.trim() === '') return;
+
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Menyimpan…';
+
+    const fd = new FormData();
+    fd.append('formType', 'resolve_p2h_followup');
+    fd.append('rowIndex', rowIndex);
+    fd.append('unit', unit);
+    fd.append('resolvedBy', resolvedBy.trim());
+
+    fetch(SCRIPT_URL, { method: 'POST', body: fd })
+      .then(res => res.json())
+      .then(data => {
+        if (data.result === 'success') {
+          showToast(data.message || 'Ditandai selesai', 'success');
+          loadFollowupBanner();
+        } else {
+          showToast(data.message || 'Gagal menyimpan', 'error');
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      })
+      .catch(() => {
+        showToast('Gagal mengirim. Periksa koneksi.', 'error');
+        btn.disabled = false;
+        btn.textContent = originalText;
+      });
+  }
+
+  function getRaporPeriodParams() {
+    const val = document.getElementById('raporBulanInput').value; // format "YYYY-MM"
+    if (!val) return { start: '', end: '' };
+    const [y, m] = val.split('-').map(Number);
+    const lastDay = new Date(y, m, 0).getDate();
+    return {
+      start: y + '-' + String(m).padStart(2, '0') + '-01',
+      end: y + '-' + String(m).padStart(2, '0') + '-' + String(lastDay).padStart(2, '0')
+    };
+  }
+
+  function loadRapor() {
+    const jenisEl = document.getElementById('raporJenisInput');
+    if (!jenisEl) return; // tab belum dirender (aman jika dipanggil sebelum DOM siap)
+    const jenis = jenisEl.value;
+    document.getElementById('raporListLabel').textContent = jenis === 'operator' ? 'Rapor Operator' : 'Rapor Unit';
+
+    const list = document.getElementById('raporList');
+    list.innerHTML = '<p class="empty-state">Memuat rapor…</p>';
+
+    const period = getRaporPeriodParams();
+    const action = jenis === 'operator' ? 'getRaporOperator' : 'getRaporUnit';
+    const url = SCRIPT_URL + '?action=' + action + '&start=' + encodeURIComponent(period.start) + '&end=' + encodeURIComponent(period.end);
+
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        const rows = data.rows || [];
+        list.innerHTML = rows.length === 0
+          ? '<p class="empty-state">Belum ada data untuk periode ini.</p>'
+          : rows.map(r => jenis === 'operator' ? renderRaporOperatorCard(r, period) : renderRaporUnitCard(r, period)).join('');
+      })
+      .catch(() => { list.innerHTML = '<p class="empty-state">Gagal memuat rapor.</p>'; });
+  }
+
+  function raporStatusLabelGeneric(s) {
+    if (s === 'OVERDUE') return 'Terlambat';
+    if (s === 'SEGERA') return 'Segera';
+    if (s === 'AMAN') return 'Aman';
+    return 'Belum Diatur';
+  }
+
+  function gradeColor(g) {
+    if (g === 'A') return 'var(--green)';
+    if (g === 'B') return 'var(--blue)';
+    if (g === 'C') return 'var(--amber)';
+    return 'var(--red)';
+  }
+
+  function buildPdfUrl(type, target, period) {
+    return SCRIPT_URL + '?action=downloadRaporPdf&type=' + type + '&target=' + encodeURIComponent(target) +
+      '&start=' + encodeURIComponent(period.start) + '&end=' + encodeURIComponent(period.end);
+  }
+
+  // Web app Apps Script tidak bisa serve file biner via link <a href> biasa dari endpoint doGet
+  // (hanya JSON/HTML/Text yang didukung), jadi PDF diambil sebagai base64 lalu dirakit
+  // menjadi Blob di browser dan diunduh lewat elemen <a> sementara.
+  // Logika unduh PDF bersama (rapor & form): ambil JSON base64 dari backend -> rakit Blob -> unduh.
+  function fetchPdfAndDownload(url, btn, fallbackName) {
+    const originalText = btn.textContent;
+    btn.textContent = 'Menyiapkan PDF…';
+    btn.disabled = true;
+
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        btn.textContent = originalText;
+        btn.disabled = false;
+        if (!data || data.result !== 'success' || !data.base64) {
+          showToast(data && data.message ? data.message : 'Gagal membuat PDF', 'error');
+          return;
+        }
+        const byteChars = atob(data.base64);
+        const byteNumbers = new Array(byteChars.length);
+        for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+        const blob = new Blob([new Uint8Array(byteNumbers)], { type: 'application/pdf' });
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = data.filename || fallbackName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+        showToast('PDF berhasil diunduh', 'success');
+      })
+      .catch(() => {
+        btn.textContent = originalText;
+        btn.disabled = false;
+        showToast('Gagal mengunduh PDF. Periksa koneksi.', 'error');
+      });
+  }
+
+  function downloadRaporPdf(type, target, period, btn) {
+    fetchPdfAndDownload(buildPdfUrl(type, target, period), btn, 'rapor.pdf');
+  }
+
+  // Form pengajuan (servis / grease) per unit, siap cetak + tanda tangan
+  function downloadFormPdf(jenis, unit, btn) {
+    const url = SCRIPT_URL + '?action=downloadFormPdf&jenis=' + encodeURIComponent(jenis) + '&unit=' + encodeURIComponent(unit);
+    fetchPdfAndDownload(url, btn, 'form_pengajuan.pdf');
+  }
+
+  function initFormDownloadButtons() {
+    ['jadwalList', 'jadwalGreasingList'].forEach(id => {
+      document.getElementById(id).addEventListener('click', e => {
+        const btn = e.target.closest('.btn-download-pdf');
+        if (!btn || !btn.dataset.form) return;
+        downloadFormPdf(btn.dataset.form, btn.dataset.unit, btn);
+      });
+    });
+  }
+
+  // Unduh PDF riwayat P2H / Servis / Greasing untuk 1 unit (unit diambil dari filter dropdown tab terkait)
+  function downloadHistoryPdf(jenis, filterSelectId, btn) {
+    const unit = document.getElementById(filterSelectId).value;
+    if (!unit) {
+      showToast('Pilih unit terlebih dahulu di filter sebelum unduh PDF', 'error');
+      return;
+    }
+    const url = SCRIPT_URL + '?action=downloadHistoryPdf&jenis=' + encodeURIComponent(jenis) + '&unit=' + encodeURIComponent(unit);
+    fetchPdfAndDownload(url, btn, 'riwayat.pdf');
+  }
+
+  function initHistoryDownloadButtons() {
+    document.getElementById('historyPdfBtn').addEventListener('click', e => downloadHistoryPdf('p2h', 'historyFilter', e.currentTarget));
+    document.getElementById('servisPdfBtn').addEventListener('click', e => downloadHistoryPdf('servis', 'servisFilter', e.currentTarget));
+    document.getElementById('greasingPdfBtn').addEventListener('click', e => downloadHistoryPdf('greasing', 'greasingFilter', e.currentTarget));
+  }
+
+  function renderRaporUnitCard(u, period) {
+    const pctText = u.pctChecklistOK === null ? '-' : u.pctChecklistOK + '%';
+    const safeGrade = escapeHtml(u.grade || '-');
+    return (
+      '<div class="j-card" data-grade="' + safeGrade + '">' +
+        '<div class="j-card__top">' +
+          '<span class="j-card__unit">' + escapeHtml(u.unit) + '</span>' +
+          '<span class="status-badge" data-grade="' + safeGrade + '">Grade ' + safeGrade + '</span>' +
+        '</div>' +
+        '<div class="j-card__hm">' + u.skor + '</div>' +
+        '<div class="j-card__hm-label">Skor Kesehatan Unit</div>' +
+        '<div class="gauge"><div class="gauge__fill" style="width:' + u.skor + '%;background:' + gradeColor(u.grade) + ';"></div></div>' +
+        '<div class="j-card__details">' +
+          '<div>Pemeriksaan P2H<b>' + u.totalP2H + 'x</b></div>' +
+          '<div>Checklist OK<b>' + pctText + '</b></div>' +
+          '<div>Laporan Trouble<b>' + u.troubleCount + '</b></div>' +
+          '<div>Status Servis<b>' + raporStatusLabelGeneric(u.statusServis) + '</b></div>' +
+        '</div>' +
+        '<button type="button" class="btn-download-pdf" data-type="unit" data-target="' + escapeHtml(u.unit) + '" data-start="' + period.start + '" data-end="' + period.end + '">📄 Unduh Rapor PDF</button>' +
+      '</div>'
+    );
+  }
+
+  function renderRaporOperatorCard(o, period) {
+    const pctText = o.pctCatatanLengkap === null ? '-' : o.pctCatatanLengkap + '%';
+    const safeGrade = escapeHtml(o.grade || '-');
+    return (
+      '<div class="j-card" data-grade="' + safeGrade + '">' +
+        '<div class="j-card__top">' +
+          '<span class="j-card__unit">' + escapeHtml(o.operator) + '</span>' +
+          '<span class="status-badge" data-grade="' + safeGrade + '">Grade ' + safeGrade + '</span>' +
+        '</div>' +
+        '<div class="j-card__hm">' + o.skor + '</div>' +
+        '<div class="j-card__hm-label">Skor Kinerja Operator</div>' +
+        '<div class="gauge"><div class="gauge__fill" style="width:' + o.skor + '%;background:' + gradeColor(o.grade) + ';"></div></div>' +
+        '<div class="j-card__details">' +
+          '<div>Laporan P2H<b>' + o.totalP2H + 'x</b></div>' +
+          '<div>Unit Ditangani<b>' + o.unitCount + '</b></div>' +
+          '<div>Catatan Lengkap<b>' + pctText + '</b></div>' +
+          '<div>Lapor Trouble<b>' + o.troubleReported + '</b></div>' +
+        '</div>' +
+        '<button type="button" class="btn-download-pdf" data-type="operator" data-target="' + escapeHtml(o.operator) + '" data-start="' + period.start + '" data-end="' + period.end + '">📄 Unduh Rapor PDF</button>' +
+      '</div>'
+    );
+  }
+
+  function bindP2HForm() {
+    const form = document.getElementById('p2hForm');
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+
+      const opVal = document.getElementById('operatorSelect').value;
+      if (!opVal || opVal === "") {
+        showToast('Harap pilih Nama Operator terlebih dahulu!', 'error');
+        return;
+      }
+
+      if (!form.reportValidity()) return;
+
+      const hiddenChecklist = document.querySelectorAll('#checklistContainer input[type="hidden"]');
+      const unsetCount = Array.from(hiddenChecklist).filter(inp => inp.value === '').length;
+      if (unsetCount > 0) {
+        showToast('Masih ada ' + unsetCount + ' item checklist yang belum diperiksa', 'error');
+        flagUnchecked();
+        return;
+      }
+
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      setLoading(true);
+
+      fetch(SCRIPT_URL, { method: 'POST', body: new FormData(form) })
+        .then(() => {
+          showToast('Laporan P2H berhasil dikirim', 'success');
+          form.reset();
+          resetSegmentedDefaults(form);
+          document.getElementById('hmHint').textContent = '';
+          renderChecklist();
+          setLoading(false);
+          validateOperatorLock('operatorSelect', 'submitBtn', 'KIRIM LAPORAN');
+          refreshAll(false);
+        })
+        .catch(() => {
+          showToast('Gagal mengirim laporan. Periksa koneksi.', 'error');
+          setLoading(false);
+          submitBtn.disabled = false;
+        });
+    });
+  }
+
+  function bindSimpleForm(formId, btnId, successMsg, lockedDefaultText) {
+    const form = document.getElementById(formId);
+    successMsg = successMsg || 'Berhasil dikirim';
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+
+      const opSel = form.querySelector('.js-operator-select');
+      if (opSel && (!opSel.value || opSel.value === "")) {
+        showToast('Harap pilih Nama Operator/Petugas terlebih dahulu!', 'error');
+        return;
+      }
+
+      if (!form.reportValidity()) return;
+
+      const btn = document.getElementById(btnId);
+      btn.disabled = true;
+      setLoading(true);
+
+      fetch(SCRIPT_URL, { method: 'POST', body: new FormData(form) })
+        .then(() => {
+          showToast(successMsg, 'success');
+          form.reset();
+          resetSegmentedDefaults(form);
+          setDefaultDate();
+          setLoading(false);
+          if (opSel && lockedDefaultText) validateOperatorLock(opSel.id, btnId, lockedDefaultText);
+          refreshAll(false);
+        })
+        .catch(() => {
+          showToast('Gagal mengirim. Periksa koneksi.', 'error');
+          setLoading(false);
+          btn.disabled = false;
+        });
+    });
+  }
+
+  function setLoading(show) {
+    document.getElementById('loadingOverlay').classList.toggle('show', show);
+  }
+
+  function formatNumber(n) {
+    const num = parseHmNumber(n);
+    if (isNaN(num)) return '-';
+    return num.toLocaleString('id-ID', { maximumFractionDigits: 1 });
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  let toastTimer;
+  function showToast(msg, type) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.className = 'toast show ' + (type || '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toast.className = 'toast'; }, 2600);
+  }
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/p2h/service-worker.js?v=3', { scope: '/p2h/' })
+            .then(() => console.log('P2H Alat Berat PWA ready'))
+            .catch(err => console.log('Service Worker error:', err));
+    });
+}
+</script>
+
+</body>
+</html>

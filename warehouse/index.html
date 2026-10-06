@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>PR WHS - SmartDairy V06 Harian</title>
+  <meta name="theme-color" content="#030712" />
+  <link rel="manifest" href="manifest.json" />
+  
+  <!-- Font Plus Jakarta Sans khas Portal Utama -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-dark: #030712;
+      --card-bg: rgba(15, 23, 42, 0.85);
+      --card-border: rgba(255, 255, 255, 0.15);
+      --text-main: #f8fafc;
+      --text-muted: #cbd5e1; /* Diperterang agar tidak 'hantu' / tidak terlihat */
+      --text-sub: #94a3b8;
+      
+      --purple: #8b5cf6;
+      --green: #10b981;
+      --cyan: #06b6d4;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+
+    body {
+      margin: 0;
+      background-color: var(--bg-dark) !important;
+      color: var(--text-main);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* ===== BACKGROUND ORBS DEKORATIF ===== */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      z-index: 0;
+      opacity: 0.3;
+      pointer-events: none;
+    }
+    .orb-1 { width: 400px; height: 400px; background: #8b5cf6; top: -100px; left: -100px; }
+    .orb-2 { width: 350px; height: 350px; background: #06b6d4; bottom: -80px; right: -80px; }
+
+    /* ===== HEADER MODERN DARK ===== */
+    .app-header {
+      background: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--card-border);
+      color: white;
+      padding: 18px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .header-inner {
+      max-width: 520px;
+      margin: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      line-height: 1.1;
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #a78bfa, #6d28d9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);
+      font-size: 18px;
+    }
+
+    .brand-title {
+      font-weight: 800;
+      font-size: 19px;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+    }
+
+    .brand-sub {
+      color: var(--text-sub);
+      font-size: 11px;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .date-pill {
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #c4b5fd;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .wrap {
+      max-width: 520px;
+      margin: 18px auto 34px;
+      padding: 0 14px 32px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .status {
+      border-radius: 14px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.12);
+      backdrop-filter: blur(8px);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    /* ===== MAIN CARD DARK GLASSMORPHISM ===== */
+    .card-main {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 24px;
+      border: 1px solid var(--card-border);
+      padding: 24px 20px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+      position: relative;
+    }
+
+    .section-title {
+      font-weight: 800;
+      font-size: 18px;
+      color: #ffffff;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: -0.3px;
+    }
+
+    label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #f1f5f9 !important; /* Terang Jelas */
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    /* PERBAIKAN TEKS MUTED KETERANGAN DALAM KARTU & RIWAYAT */
+    .text-muted {
+      color: var(--text-muted) !important;
+    }
+
+    /* ===== INPUT & SELECT DARK GLASS ===== */
+    .electric-field {
+      width: 100%;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-weight: 600;
+      font-size: 14px;
+      background: rgba(15, 23, 42, 0.9) !important;
+      color: #ffffff !important;
+      outline: none;
+      transition: all 0.3s;
+      min-height: 48px;
+    }
+
+    .electric-field::placeholder {
+      color: var(--text-sub) !important;
+      opacity: 0.8;
+    }
+
+    .electric-field:focus {
+      border-color: #8b5cf6 !important;
+      box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.25) !important;
+      background: rgba(15, 23, 42, 0.98) !important;
+    }
+
+    .electric-field option {
+      background: #0f172a !important;
+      color: #ffffff !important;
+    }
+
+    .input-group .electric-field {
+      border-radius: 14px 0 0 14px;
+      font-size: 20px;
+      font-weight: 800;
+      color: #34d399 !important;
+    }
+
+    .input-group-text {
+      border-radius: 0 14px 14px 0;
+      font-weight: 800;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(30, 41, 59, 0.9);
+      color: #cbd5e1 !important;
+    }
+
+    .target-box {
+      display: none;
+      background: rgba(30, 41, 59, 0.7);
+      border-radius: 16px;
+      border-left: 4px solid #8b5cf6;
+      padding: 16px;
+      margin-bottom: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .target-num {
+      font-size: 28px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .btn-main {
+      width: 100%;
+      border: 0;
+      border-radius: 14px;
+      padding: 15px;
+      font-weight: 700;
+      font-size: 14px;
+      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+      color: white;
+      box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transition: all 0.3s;
+    }
+
+    .btn-main:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 25px rgba(139, 92, 246, 0.6);
+      background: linear-gradient(135deg, #a78bfa, #6d28d9);
+    }
+
+    .btn-main:disabled {
+      background: rgba(51, 65, 85, 0.5);
+      color: #94a3b8;
+      box-shadow: none;
+    }
+
+    .btn-light2 {
+      width: 100%;
+      margin-top: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(30, 41, 59, 0.6);
+      font-weight: 700;
+      font-size: 13px;
+      color: #f1f5f9;
+      transition: all 0.3s;
+    }
+
+    .btn-light2:hover {
+      background: rgba(51, 65, 85, 0.9);
+      color: #ffffff;
+    }
+
+    .history-head {
+      margin: 24px 4px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #f1f5f9;
+      font-weight: 700;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .count-pill {
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 999px;
+      padding: 4px 12px;
+      color: #38bdf8;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .recent-item {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    .badge-soft {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      background: rgba(139, 92, 246, 0.25);
+      color: #c4b5fd;
+      border: 1px solid rgba(139, 92, 246, 0.4);
+      margin-bottom: 6px;
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--text-muted);
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 28px 10px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .toastx {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+      width: min(92%, 520px);
+      padding: 15px 16px;
+      border-radius: 14px;
+      color: white;
+      font-weight: 700;
+      font-size: 13px;
+      z-index: 50;
+      display: none;
+      box-shadow: 0 20px 30px rgba(0,0,0,0.5);
+    }
+
+    .toastx.success { background: #059669; }
+    .toastx.error { background: #dc2626; }
+    .toastx.info { background: #1e293b; border: 1px solid var(--card-border); }
+
+    .loading {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 7, 18, 0.85);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 40;
+    }
+
+    .loader {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top-color: #8b5cf6;
+      animation: spin .8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .sub-area, .alasan-area { display: none; }
+    .small-note { font-size: 11px; color: var(--text-muted); margin-top: 6px; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-icon"><i class="bi bi-cloud-check-fill text-white"></i></div>
+        <div>
+          <div class="brand-title">PR WHS</div>
+          <div class="brand-sub">Purchase Request Gudang</div>
+        </div>
+      </div>
+      <div class="date-pill" id="current-date">-</div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="status" id="statusBox">
+      <i class="bi bi-wifi"></i>
+      <span id="statusText">Online - siap sinkron ke Spreadsheet</span>
+    </div>
+
+    <section class="card-main">
+      <div class="section-title">
+        <i class="bi bi-plus-circle-fill" style="color:#a78bfa;"></i>
+        Input Purchase Request WHS
+      </div>
+
+      <div class="mb-3">
+        <label>Urutan Pengiriman</label>
+        <select id="batch-select" class="electric-field">
+          <option value="Batch 1">🚚 Batch 1</option>
+          <option value="Batch 2">🚚 Batch 2</option>
+          <option value="Batch 3">🚚 Batch 3</option>
+          <option value="Batch 4">🚚 Batch 4</option>
+          <option value="Harian">📝 Harian</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label>Pilih Bahan Request</label>
+        <select id="bahan-select" class="electric-field">
+          <option value="" selected disabled>Memuat data pakan...</option>
+        </select>
+        <div class="small-note">Batch 1-4: hanya bahan yang ada tonase. Harian: semua bahan tanpa tonase.</div>
+      </div>
+
+      <div class="mb-3 sub-area" id="substitute-dropdown-area">
+        <label style="color: #fbbf24;">Pilih Bahan Substitusi</label>
+        <select id="substitute-select" class="electric-field">
+          <option value="" selected disabled>-- Pilih Bahan Pengganti --</option>
+        </select>
+      </div>
+
+      <div class="mb-3 alasan-area" id="alasan-area">
+        <label>Alasan Substitusi</label>
+        <select id="alasan-select" class="electric-field">
+          <option value="">-- Pilih Alasan --</option>
+          <option value="Stok bahan request kosong">Stok bahan request kosong</option>
+          <option value="Stok bahan request kurang">Stok bahan request kurang</option>
+          <option value="Kualitas bahan tidak sesuai">Kualitas bahan tidak sesuai</option>
+          <option value="Arahan atasan / nutrisi">Arahan atasan / nutrisi</option>
+          <option value="Lainnya">Lainnya</option>
+        </select>
+      </div>
+
+      <div class="target-box" id="tonnage-area">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="small text-muted font-bold text-uppercase">Target Sheet</div>
+            <span class="target-num" id="target-weight">0</span>
+            <span class="font-bold text-muted">kg</span>
+          </div>
+          <span class="badge rounded-pill bg-warning text-dark" id="substitute-badge" style="display:none;">Substitusi</span>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label>Aktual Timbangan (KG)</label>
+        <div class="input-group">
+          <input type="number" id="actual-input" class="electric-field" placeholder="0" min="0" disabled>
+          <span class="input-group-text">KG</span>
+        </div>
+      </div>
+
+      <button id="submit-btn" class="btn-main" disabled>
+        <i class="bi bi-cloud-upload-fill me-2"></i> Kirim PR ke Spreadsheet
+      </button>
+      <button class="btn-light2" id="refresh-btn" type="button">
+        <i class="bi bi-arrow-clockwise me-1"></i> Refresh Data
+      </button>
+    </section>
+
+    <div class="history-head">
+      <span>Riwayat Pengiriman Hari Ini</span>
+      <span class="count-pill" id="log-count">0 Baris</span>
+    </div>
+    <div id="activity-log">
+      <div class="empty">Belum ada bahan yang dikirim ke sheet.</div>
+    </div>
+  </main>
+
+  <div class="loading" id="loading-screen"><div class="loader"></div></div>
+  <div class="toastx" id="toastBox"></div>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbwgpqKWtMeHPXgkfshFK_euA-sMq2T5uFFc_BKwURfIIxQL5Iw7tEnoClPFSlW6ejM6/exec";
+
+    let dataBahan = [];
+    let selectedRequest = null;
+    let selectedFinal = null;
+    let isModeSubstitusi = false;
+
+    const $ = (id) => document.getElementById(id);
+
+    window.addEventListener("load", () => {
+      $("current-date").innerText = new Date().toLocaleDateString("id-ID", {
+        day:"numeric", month:"short", year:"numeric"
+      });
+
+      bindEvents();
+      updateOnlineStatus();
+      muatSemuaData();
+
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("./sw.js").then(reg => {
+          reg.update();
+        }).catch(() => {});
+      }
+    });
+
+    window.addEventListener("online", updateOnlineStatus);
+    window.addEventListener("offline", updateOnlineStatus);
+
+    function bindEvents() {
+      $("batch-select").addEventListener("change", onBatchChanged);
+      $("bahan-select").addEventListener("change", onBahanMainSelected);
+      $("substitute-select").addEventListener("change", onBahanSubstituteSelected);
+      $("actual-input").addEventListener("input", updateSubmitState);
+      $("submit-btn").addEventListener("click", prosesSimpan);
+      $("refresh-btn").addEventListener("click", muatSemuaData);
+    }
+
+    function updateOnlineStatus() {
+      if (navigator.onLine) {
+        $("statusBox").style.background = "rgba(16, 185, 129, 0.12)";
+        $("statusBox").style.color = "#34d399";
+        $("statusBox").style.borderColor = "rgba(16, 185, 129, 0.35)";
+        $("statusText").innerText = "Online - siap sinkron ke Spreadsheet";
+      } else {
+        $("statusBox").style.background = "rgba(239, 68, 68, 0.12)";
+        $("statusBox").style.color = "#f87171";
+        $("statusBox").style.borderColor = "rgba(239, 68, 68, 0.35)";
+        $("statusText").innerText = "Offline - koneksi terputus";
+      }
+    }
+
+    async function muatSemuaData() {
+      showLoading(true);
+      try {
+        await Promise.all([muatDataDariSheet(), muatHistoryHariIni()]);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    async function muatDataDariSheet() {
+      try {
+        const res = await fetch(API_URL + "?action=data&t=" + Date.now(), {
+          method: "GET",
+          cache: "no-store"
+        });
+
+        if (!res.ok) throw new Error("HTTP " + res.status);
+
+        const data = await res.json();
+
+        if (!Array.isArray(data)) {
+          throw new Error(data.message || "Format data tidak valid");
+        }
+
+        dataBahan = data;
+        initDropdowns();
+      } catch (err) {
+        console.error(err);
+        showToast("Gagal mengambil data dari Google Sheets: " + err.message, "error");
+      }
+    }
+
+    async function muatHistoryHariIni() {
+      try {
+        const res = await fetch(API_URL + "?action=history&t=" + Date.now(), {
+          method: "GET",
+          cache: "no-store"
+        });
+
+        if (!res.ok) throw new Error("HTTP " + res.status);
+
+        const data = await res.json();
+
+        if (!Array.isArray(data)) {
+          throw new Error(data.message || "Format history tidak valid");
+        }
+
+        renderHistory(data);
+      } catch (err) {
+        console.error(err);
+        showToast("Gagal mengambil history Log_Gudang: " + err.message, "error");
+      }
+    }
+
+    function initDropdowns() {
+      const mainSelect = $("bahan-select");
+      const subSelect = $("substitute-select");
+      const batchVal = $("batch-select").value;
+      const isHarian = batchVal === "Harian";
+
+      mainSelect.innerHTML = '<option value="" selected disabled>-- Pilih Bahan Request --</option>';
+      subSelect.innerHTML = '<option value="" selected disabled>-- Pilih Bahan Pengganti --</option>';
+
+      dataBahan.forEach((item, index) => {
+        const targetKg = Number(item.target || 0);
+
+        if (isHarian) {
+          const optMain = document.createElement("option");
+          optMain.value = index;
+          optMain.innerHTML = `📦 ${item.name}`;
+          mainSelect.appendChild(optMain);
+          return;
+        }
+
+        if (targetKg > 0) {
+          const optMain = document.createElement("option");
+          optMain.value = index;
+          optMain.innerHTML = `📦 ${item.name} (${targetKg} kg)`;
+          mainSelect.appendChild(optMain);
+        }
+
+        if (targetKg <= 0) {
+          const optSub = document.createElement("option");
+          optSub.value = index;
+          optSub.innerHTML = `🔄 ${item.name}`;
+          subSelect.appendChild(optSub);
+        }
+      });
+
+      if (!isHarian) {
+        const trigger = document.createElement("option");
+        trigger.value = "TRIGGER_SUBSTITUSI";
+        trigger.innerHTML = "⚡ [ SUBSTITUSI BAHAN ]";
+        mainSelect.appendChild(trigger);
+      }
+
+      $("substitute-dropdown-area").style.display = "none";
+      $("alasan-area").style.display = "none";
+      $("tonnage-area").style.display = "none";
+      resetInput();
+      selectedRequest = null;
+      selectedFinal = null;
+      isModeSubstitusi = false;
+    }
+
+    function onBatchChanged() {
+      initDropdowns();
+
+      if ($("batch-select").value === "Harian") {
+        showToast("Mode Harian aktif: semua bahan muncul tanpa tonase.", "info");
+      }
+    }
+
+    function onBahanMainSelected() {
+      const val = $("bahan-select").value;
+      const isHarian = $("batch-select").value === "Harian";
+      resetInput();
+
+      if (val === "TRIGGER_SUBSTITUSI") {
+        isModeSubstitusi = true;
+        selectedRequest = null;
+        selectedFinal = null;
+        $("substitute-dropdown-area").style.display = "block";
+        $("alasan-area").style.display = "block";
+        $("tonnage-area").style.display = "none";
+        $("substitute-select").value = "";
+        return;
+      }
+
+      isModeSubstitusi = false;
+      selectedRequest = dataBahan[Number(val)];
+      selectedFinal = selectedRequest;
+
+      $("substitute-dropdown-area").style.display = "none";
+      $("alasan-area").style.display = "none";
+
+      if (isHarian) {
+        $("tonnage-area").style.display = "none";
+      } else {
+        $("tonnage-area").style.display = "block";
+        $("target-weight").innerText = selectedFinal.target;
+        $("substitute-badge").style.display = "none";
+        $("tonnage-area").style.borderLeftColor = "#8b5cf6";
+      }
+
+      $("actual-input").disabled = false;
+      $("actual-input").focus();
+      updateSubmitState();
+    }
+
+    function onBahanSubstituteSelected() {
+      const val = $("substitute-select").value;
+      if (val === "") return;
+
+      selectedFinal = dataBahan[Number(val)];
+
+      $("tonnage-area").style.display = "block";
+      $("target-weight").innerText = 0;
+      $("substitute-badge").style.display = "inline-block";
+      $("substitute-badge").innerText = "Substitusi Aktif";
+      $("tonnage-area").style.borderLeftColor = "#f59e0b";
+      $("actual-input").disabled = false;
+      $("actual-input").focus();
+      updateSubmitState();
+    }
+
+    function resetInput() {
+      $("actual-input").value = "";
+      $("actual-input").disabled = true;
+      $("submit-btn").disabled = true;
+    }
+
+    function updateSubmitState() {
+      const actual = Number($("actual-input").value || 0);
+      const bahanOk = !!selectedFinal;
+      $("submit-btn").disabled = !(bahanOk && actual > 0);
+    }
+
+    async function prosesSimpan() {
+      const actualVal = Number($("actual-input").value || 0);
+      if (!selectedFinal || actualVal <= 0) {
+        showToast("Pilih bahan dan isi aktual KG terlebih dahulu.", "error");
+        return;
+      }
+
+      const payload = {
+        batch: $("batch-select").value,
+        namaBahan: selectedFinal.name,
+        targetAwal: ($("batch-select").value === "Harian" || isModeSubstitusi) ? 0 : Number(selectedFinal.target || 0),
+        actualKg: actualVal,
+        modeSubstitusi: isModeSubstitusi,
+        alasanSubstitusi: isModeSubstitusi ? $("alasan-select").value : ""
+      };
+
+      showLoading(true);
+
+      try {
+        await fetch(API_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+
+        showToast("Data terkirim. Refresh history dari Log_Gudang...", "success");
+
+        $("actual-input").value = "";
+        $("actual-input").disabled = true;
+        $("bahan-select").value = "";
+        $("substitute-select").value = "";
+        $("alasan-select").value = "";
+        $("substitute-dropdown-area").style.display = "none";
+        $("alasan-area").style.display = "none";
+        $("tonnage-area").style.display = "none";
+        $("submit-btn").disabled = true;
+        selectedFinal = null;
+        selectedRequest = null;
+        isModeSubstitusi = false;
+
+        setTimeout(async () => {
+          await muatHistoryHariIni();
+          await muatDataDariSheet();
+        }, 900);
+
+      } catch (err) {
+        console.error(err);
+        showToast("Gagal mengirim data: " + err.message, "error");
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function renderHistory(data) {
+      const container = $("activity-log");
+      container.innerHTML = "";
+
+      if (!data || data.length === 0) {
+        $("log-count").innerText = "0 Baris";
+        container.innerHTML = '<div class="empty">Belum ada bahan yang dikirim ke sheet.</div>';
+        return;
+      }
+
+      data.forEach(item => {
+        const sub = String(item.substitusi || "TIDAK").toUpperCase() === "YA";
+        const badge = sub ? "Substitusi" : "Sesuai Target";
+        const badgeBg = sub ? "rgba(245, 158, 11, 0.25)" : "rgba(16, 185, 129, 0.25)";
+        const badgeColor = sub ? "#fbbf24" : "#34d399";
+        const badgeBorder = sub ? "rgba(245, 158, 11, 0.4)" : "rgba(16, 185, 129, 0.4)";
+        const alasan = item.alasan ? `<div class="small text-muted mt-1">Alasan: ${escapeHtml(item.alasan)}</div>` : "";
+
+        const html = `
+          <div class="recent-item">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              <div>
+                <span class="badge-soft">${escapeHtml(item.batch || "-")}</span>
+                <div class="fw-bold text-white fs-6">${escapeHtml(item.namaBahan || "-")}</div>
+                <div class="small text-muted">${String(item.batch || "") === "Harian" ? "Timbang manual harian" : "Target: " + Number(item.target || 0) + " kg"} • Jam: ${escapeHtml(item.timestamp || "-")}</div>
+                ${alasan}
+              </div>
+              <div class="text-end">
+                <div style="background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeBorder}; border-radius:999px; padding:3px 10px; font-size:10px; font-weight:700;">${badge}</div>
+                <div class="fs-5 fw-bold mt-2" style="color:#34d399;">${Number(item.actual || 0)} <small class="fs-6 text-muted">kg</small></div>
+              </div>
+            </div>
+          </div>
+        `;
+        container.insertAdjacentHTML("beforeend", html);
+      });
+
+      $("log-count").innerText = data.length + " Baris";
+    }
+
+    function showLoading(show) {
+      $("loading-screen").style.display = show ? "flex" : "none";
+    }
+
+    function showToast(message, type="info") {
+      const box = $("toastBox");
+      box.className = "toastx " + type;
+      box.innerText = message;
+      box.style.display = "block";
+      clearTimeout(window.toastTimer);
+      window.toastTimer = setTimeout(() => box.style.display = "none", 4200);
+    }
+
+    function escapeHtml(text) {
+      return String(text).replace(/[&<>"']/g, function(m) {
+        return ({
+          "&":"&amp;",
+          "<":"&lt;",
+          ">":"&gt;",
+          '"':"&quot;",
+          "'":"&#039;"
+        })[m];
+      });
+    }
+  </script>
+</body>
+</html>

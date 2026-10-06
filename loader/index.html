@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>TMR Loader - Dairy System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-dark: #030712;
+            --card-bg: rgba(15, 23, 42, 0.75);
+            --card-border: rgba(255, 255, 255, 0.12);
+            --emerald-glow: #10b981;
+        }
+
+        body { 
+            background-color: var(--bg-dark); 
+            color: #f8fafc; 
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: 0;
+            opacity: 0.25;
+            pointer-events: none;
+        }
+        .orb-1 { width: 400px; height: 400px; background: #059669; top: -100px; left: -100px; }
+        .orb-2 { width: 350px; height: 350px; background: #10b981; bottom: -80px; right: -80px; }
+
+        .glass-card { 
+            background: var(--card-bg); 
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border); 
+            border-radius: 28px; 
+            box-shadow: 0 20px 40px -15px rgba(0,0,0,0.5); 
+            position: relative;
+            z-index: 10;
+        }
+
+        .neo-input { 
+            width: 100%;
+            background-color: rgba(30, 41, 59, 0.85) !important; 
+            border: 1px solid rgba(255, 255, 255, 0.2) !important; 
+            border-radius: 16px; 
+            transition: all 0.3s; 
+            font-weight: 700; 
+            color: #ffffff !important;
+            font-size: 14px;
+            outline: none;
+        }
+
+        select.neo-input {
+            appearance: none;
+            -webkit-appearance: none;
+            padding-right: 42px !important;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2310b981' stroke-width='3'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7' /%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 16px center !important;
+            background-size: 18px !important;
+        }
+
+        .neo-input::placeholder { color: #94a3b8 !important; opacity: 0.8; }
+        .neo-input:focus { 
+            border-color: var(--emerald-glow) !important; 
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.25) !important; 
+            background-color: rgba(15, 23, 42, 0.98) !important;
+        }
+        .neo-input option { background-color: #0f172a !important; color: #ffffff !important; }
+
+        /* PEN ITEM STATES */
+        .pen-normal { 
+            background: rgba(30, 41, 59, 0.75) !important; 
+            border: 1px solid rgba(255,255,255,0.15) !important; 
+            transition: all 0.2s ease;
+        }
+        .pen-normal:hover {
+            background: rgba(51, 65, 85, 0.9) !important;
+            border-color: rgba(16, 185, 129, 0.5) !important;
+            transform: translateY(-1px);
+        }
+
+        .pen-done-1x { 
+            background: rgba(245, 158, 11, 0.2) !important; 
+            border: 1.5px solid #f59e0b !important; 
+        }
+        .pen-locked-2x { 
+            background: rgba(239, 68, 68, 0.2) !important; 
+            border: 1px solid #ef4444 !important; 
+            opacity: 0.5; 
+        }
+        .pen-disabled-limit { opacity: 0.35; filter: grayscale(1); }
+
+        .target-val { 
+            font-size: 5rem; 
+            font-weight: 800; 
+            color: #ffffff; 
+            line-height: 1; 
+            text-shadow: 0 4px 20px rgba(16, 185, 129, 0.4); 
+        }
+        .target-card { 
+            background: rgba(6, 78, 59, 0.45); 
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 30px; 
+            padding: 2rem 1rem; 
+            text-align: center; 
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4); 
+            backdrop-filter: blur(12px);
+        }
+
+        .electric-green-wrap, .electric-pen {
+            position: relative;
+            border-radius: 18px;
+            padding: 1.5px;
+            overflow: hidden;
+        }
+        .electric-green-wrap::before, .electric-pen::before {
+            content: "";
+            position: absolute;
+            inset: -90px;
+            background: conic-gradient(from 0deg, transparent 0deg, transparent 60deg, #10b981 100deg, #34d399 135deg, #10b981 195deg, transparent 255deg, transparent 360deg);
+            animation: electricGreenRotate 2.4s linear infinite;
+        }
+        .electric-green-wrap::after, .electric-pen::after {
+            content: "";
+            position: absolute;
+            inset: 1.5px;
+            border-radius: 16px;
+            background: #0f172a;
+        }
+        .electric-green-wrap > *, .electric-pen > * { position: relative; z-index: 2; }
+
+        @keyframes electricGreenRotate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .status-pill { border-radius: 999px; padding: 0.35rem 0.75rem; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+        .status-online { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+        .status-offline { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+        
+        .sync-btn { 
+            background: linear-gradient(135deg, #059669, #047857); 
+            color: white; 
+            border-radius: 16px; 
+            padding: 14px 16px; 
+            font-weight: 800; 
+            font-size: 12px; 
+            box-shadow: 0 4px 15px rgba(5, 150, 105, 0.4);
+            transition: all 0.3s;
+        }
+        .sync-btn:hover { transform: translateY(-2px); }
+
+        /* TONASE SELECTION STYLING */
+        .tonase-pill {
+            cursor: pointer;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.25s ease;
+        }
+        .tonase-option input:checked + .tonase-pill { 
+            background: #059669 !important; 
+            border-color: #34d399 !important; 
+            color: #ffffff !important; 
+            box-shadow: 0 8px 20px rgba(5, 150, 105, 0.4) !important; 
+        }
+
+        .tonase-disabled {
+            opacity: 0.35 !important;
+            filter: grayscale(1) !important;
+            pointer-events: none !important;
+            cursor: not-allowed !important;
+        }
+
+        .ai-btn {
+            background: linear-gradient(135deg, #6366f1, #3b82f6);
+            color: white;
+            border-radius: 16px;
+            padding: 12px 18px;
+            font-weight: 800;
+            font-size: 12px;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+            transition: all 0.3s ease;
+        }
+        .ai-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(99, 102, 241, 0.6); }
+
+        .btn-locked {
+            background: rgba(51, 65, 85, 0.5) !important;
+            color: #94a3b8 !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            cursor: not-allowed !important;
+        }
+
+        /* TOAST NOTIFICATION */
+        #toastBox {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            z-index: 200;
+            transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0;
+            pointer-events: none;
+        }
+        #toastBox.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .animate-pop { animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+    </style>
+    <meta name="theme-color" content="#030712">
+<style id="tw-css">/*TW-START*/*,:after,:before{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/*! tailwindcss v3.4.19 | MIT License | https://tailwindcss.com*/*,:after,:before{box-sizing:border-box;border:0 solid #e5e7eb}:after,:before{--tw-content:""}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;-o-tab-size:4;tab-size:4;font-family:ui-sans-serif,system-ui,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0}fieldset,legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::-moz-placeholder,textarea::-moz-placeholder{opacity:1;color:#9ca3af}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.pointer-events-none{pointer-events:none}.collapse{visibility:collapse}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.inset-0{inset:0}.right-4{right:1rem}.top-4{top:1rem}.z-10{z-index:10}.z-\[100\]{z-index:100}.z-\[150\]{z-index:150}.mx-auto{margin-left:auto;margin-right:auto}.my-4{margin-top:1rem;margin-bottom:1rem}.mb-1{margin-bottom:.25rem}.mb-2{margin-bottom:.5rem}.mb-3{margin-bottom:.75rem}.mb-4{margin-bottom:1rem}.mb-5{margin-bottom:1.25rem}.mb-6{margin-bottom:1.5rem}.mb-8{margin-bottom:2rem}.ml-2{margin-left:.5rem}.mt-0{margin-top:0}.mt-0\.5{margin-top:.125rem}.mt-1{margin-top:.25rem}.mt-2{margin-top:.5rem}.mt-3{margin-top:.75rem}.mt-5{margin-top:1.25rem}.mt-6{margin-top:1.5rem}.block{display:block}.inline-block{display:inline-block}.flex{display:flex}.table{display:table}.grid{display:grid}.hidden{display:none}.h-5{height:1.25rem}.h-64{height:16rem}.h-8{height:2rem}.h-full{height:100%}.max-h-64{max-height:16rem}.max-h-80{max-height:20rem}.max-h-96{max-height:24rem}.max-h-\[420px\]{max-height:420px}.max-h-\[92vh\]{max-height:92vh}.w-11{width:2.75rem}.w-11\/12{width:91.666667%}.w-24{width:6rem}.w-28{width:7rem}.w-5{width:1.25rem}.w-8{width:2rem}.w-full{width:100%}.min-w-0{min-width:0}.min-w-\[180px\]{min-width:180px}.max-w-2xl{max-width:42rem}.max-w-7xl{max-width:80rem}.max-w-\[200px\]{max-width:200px}.max-w-lg{max-width:32rem}.max-w-md{max-width:28rem}.flex-1{flex:1 1 0%}.border-collapse{border-collapse:collapse}.transform{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}@keyframes pulse{50%{opacity:.5}}.animate-pulse{animation:pulse 2s cubic-bezier(.4,0,.6,1) infinite}@keyframes spin{to{transform:rotate(1turn)}}.animate-spin{animation:spin 1s linear infinite}.cursor-pointer{cursor:pointer}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-start{align-items:flex-start}.items-end{align-items:flex-end}.items-center{align-items:center}.justify-end{justify-content:flex-end}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-1{gap:.25rem}.gap-1\.5{gap:.375rem}.gap-2{gap:.5rem}.gap-3{gap:.75rem}.gap-4{gap:1rem}.space-y-1>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.25rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.25rem*var(--tw-space-y-reverse))}.space-y-1\.5>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.375rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.375rem*var(--tw-space-y-reverse))}.space-y-2>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.5rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.5rem*var(--tw-space-y-reverse))}.space-y-2\.5>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.625rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.625rem*var(--tw-space-y-reverse))}.space-y-3>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.75rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.75rem*var(--tw-space-y-reverse))}.space-y-4>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1rem*var(--tw-space-y-reverse))}.space-y-5>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1.25rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.25rem*var(--tw-space-y-reverse))}.space-y-6>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1.5rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.5rem*var(--tw-space-y-reverse))}.overflow-hidden{overflow:hidden}.overflow-x-auto{overflow-x:auto}.overflow-y-auto{overflow-y:auto}.truncate{overflow:hidden;text-overflow:ellipsis}.truncate,.whitespace-nowrap{white-space:nowrap}.break-words{overflow-wrap:break-word}.rounded{border-radius:.25rem}.rounded-2xl{border-radius:1rem}.rounded-\[35px\]{border-radius:35px}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:.5rem}.rounded-md{border-radius:.375rem}.rounded-xl{border-radius:.75rem}.border{border-width:1px}.border-4{border-width:4px}.border-b{border-bottom-width:1px}.border-b-2{border-bottom-width:2px}.border-l-4{border-left-width:4px}.border-t-4{border-top-width:4px}.border-amber-500{--tw-border-opacity:1;border-color:rgb(245 158 11/var(--tw-border-opacity,1))}.border-amber-500\/30{border-color:rgba(245,158,11,.3)}.border-amber-500\/40{border-color:rgba(245,158,11,.4)}.border-emerald-400{--tw-border-opacity:1;border-color:rgb(52 211 153/var(--tw-border-opacity,1))}.border-emerald-400\/30{border-color:rgba(52,211,153,.3)}.border-emerald-500{--tw-border-opacity:1;border-color:rgb(16 185 129/var(--tw-border-opacity,1))}.border-emerald-500\/30{border-color:rgba(16,185,129,.3)}.border-emerald-500\/40{border-color:rgba(16,185,129,.4)}.border-emerald-500\/60{border-color:rgba(16,185,129,.6)}.border-indigo-500{--tw-border-opacity:1;border-color:rgb(99 102 241/var(--tw-border-opacity,1))}.border-indigo-500\/30{border-color:rgba(99,102,241,.3)}.border-indigo-500\/40{border-color:rgba(99,102,241,.4)}.border-orange-500{--tw-border-opacity:1;border-color:rgb(249 115 22/var(--tw-border-opacity,1))}.border-orange-500\/40{border-color:rgba(249,115,22,.4)}.border-red-500{--tw-border-opacity:1;border-color:rgb(239 68 68/var(--tw-border-opacity,1))}.border-red-500\/30{border-color:rgba(239,68,68,.3)}.border-red-500\/40{border-color:rgba(239,68,68,.4)}.border-slate-600{--tw-border-opacity:1;border-color:rgb(71 85 105/var(--tw-border-opacity,1))}.border-slate-700{--tw-border-opacity:1;border-color:rgb(51 65 85/var(--tw-border-opacity,1))}.border-white{--tw-border-opacity:1;border-color:rgb(255 255 255/var(--tw-border-opacity,1))}.border-white\/10{border-color:hsla(0,0%,100%,.1)}.border-white\/30{border-color:hsla(0,0%,100%,.3)}.border-t-transparent{border-top-color:transparent}.bg-amber-500{--tw-bg-opacity:1;background-color:rgb(245 158 11/var(--tw-bg-opacity,1))}.bg-amber-500\/20{background-color:rgba(245,158,11,.2)}.bg-amber-950{--tw-bg-opacity:1;background-color:rgb(69 26 3/var(--tw-bg-opacity,1))}.bg-amber-950\/50{background-color:rgba(69,26,3,.5)}.bg-amber-950\/70{background-color:rgba(69,26,3,.7)}.bg-amber-950\/80{background-color:rgba(69,26,3,.8)}.bg-black{--tw-bg-opacity:1;background-color:rgb(0 0 0/var(--tw-bg-opacity,1))}.bg-black\/80{background-color:rgba(0,0,0,.8)}.bg-emerald-500{--tw-bg-opacity:1;background-color:rgb(16 185 129/var(--tw-bg-opacity,1))}.bg-emerald-500\/15{background-color:rgba(16,185,129,.15)}.bg-emerald-500\/20{background-color:rgba(16,185,129,.2)}.bg-emerald-950{--tw-bg-opacity:1;background-color:rgb(2 44 34/var(--tw-bg-opacity,1))}.bg-emerald-950\/50{background-color:rgba(2,44,34,.5)}.bg-emerald-950\/80{background-color:rgba(2,44,34,.8)}.bg-indigo-500{--tw-bg-opacity:1;background-color:rgb(99 102 241/var(--tw-bg-opacity,1))}.bg-indigo-500\/20{background-color:rgba(99,102,241,.2)}.bg-indigo-600{--tw-bg-opacity:1;background-color:rgb(79 70 229/var(--tw-bg-opacity,1))}.bg-indigo-950{--tw-bg-opacity:1;background-color:rgb(30 27 75/var(--tw-bg-opacity,1))}.bg-indigo-950\/60{background-color:rgba(30,27,75,.6)}.bg-orange-500{--tw-bg-opacity:1;background-color:rgb(249 115 22/var(--tw-bg-opacity,1))}.bg-orange-500\/20{background-color:rgba(249,115,22,.2)}.bg-red-500{--tw-bg-opacity:1;background-color:rgb(239 68 68/var(--tw-bg-opacity,1))}.bg-red-500\/20{background-color:rgba(239,68,68,.2)}.bg-red-950{--tw-bg-opacity:1;background-color:rgb(69 10 10/var(--tw-bg-opacity,1))}.bg-red-950\/50{background-color:rgba(69,10,10,.5)}.bg-red-950\/60{background-color:rgba(69,10,10,.6)}.bg-red-950\/70{background-color:rgba(69,10,10,.7)}.bg-slate-700{--tw-bg-opacity:1;background-color:rgb(51 65 85/var(--tw-bg-opacity,1))}.bg-slate-800{--tw-bg-opacity:1;background-color:rgb(30 41 59/var(--tw-bg-opacity,1))}.bg-slate-900{--tw-bg-opacity:1;background-color:rgb(15 23 42/var(--tw-bg-opacity,1))}.bg-slate-900\/60{background-color:rgba(15,23,42,.6)}.bg-slate-900\/80{background-color:rgba(15,23,42,.8)}.bg-slate-900\/90{background-color:rgba(15,23,42,.9)}.bg-transparent{background-color:transparent}.bg-gradient-to-br{background-image:linear-gradient(to bottom right,var(--tw-gradient-stops))}.from-emerald-600{--tw-gradient-from:#059669 var(--tw-gradient-from-position);--tw-gradient-to:rgba(5,150,105,0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)}.to-teal-800{--tw-gradient-to:#115e59 var(--tw-gradient-to-position)}.p-10{padding:2.5rem}.p-2{padding:.5rem}.p-2\.5{padding:.625rem}.p-3{padding:.75rem}.p-3\.5{padding:.875rem}.p-4{padding:1rem}.p-5{padding:1.25rem}.p-6{padding:1.5rem}.p-8{padding:2rem}.px-1{padding-left:.25rem;padding-right:.25rem}.px-1\.5{padding-left:.375rem;padding-right:.375rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-3{padding-left:.75rem;padding-right:.75rem}.px-4{padding-left:1rem;padding-right:1rem}.py-0{padding-top:0;padding-bottom:0}.py-0\.5{padding-top:.125rem;padding-bottom:.125rem}.py-1{padding-top:.25rem;padding-bottom:.25rem}.py-10{padding-top:2.5rem;padding-bottom:2.5rem}.py-12{padding-top:3rem;padding-bottom:3rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.py-3{padding-top:.75rem;padding-bottom:.75rem}.py-4{padding-top:1rem;padding-bottom:1rem}.py-5{padding-top:1.25rem;padding-bottom:1.25rem}.py-8{padding-top:2rem;padding-bottom:2rem}.pb-2{padding-bottom:.5rem}.pb-20{padding-bottom:5rem}.pb-28{padding-bottom:7rem}.pr-1{padding-right:.25rem}.pr-2{padding-right:.5rem}.pt-2{padding-top:.5rem}.text-center{text-align:center}.text-right{text-align:right}.text-2xl{font-size:1.5rem;line-height:2rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-5xl{font-size:3rem;line-height:1}.text-7xl{font-size:4.5rem;line-height:1}.text-\[10px\]{font-size:10px}.text-\[11px\]{font-size:11px}.text-\[9px\]{font-size:9px}.text-base{font-size:1rem;line-height:1.5rem}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-sm{font-size:.875rem;line-height:1.25rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-xs{font-size:.75rem;line-height:1rem}.font-black{font-weight:900}.font-bold{font-weight:700}.font-extrabold{font-weight:800}.font-semibold{font-weight:600}.uppercase{text-transform:uppercase}.italic{font-style:italic}.leading-relaxed{line-height:1.625}.tracking-tight{letter-spacing:-.025em}.tracking-wide{letter-spacing:.025em}.tracking-wider{letter-spacing:.05em}.tracking-widest{letter-spacing:.1em}.\!text-emerald-400{--tw-text-opacity:1!important;color:rgb(52 211 153/var(--tw-text-opacity,1))!important}.\!text-slate-500{--tw-text-opacity:1!important;color:rgb(100 116 139/var(--tw-text-opacity,1))!important}.text-amber-300{--tw-text-opacity:1;color:rgb(252 211 77/var(--tw-text-opacity,1))}.text-amber-400{--tw-text-opacity:1;color:rgb(251 191 36/var(--tw-text-opacity,1))}.text-emerald-200{--tw-text-opacity:1;color:rgb(167 243 208/var(--tw-text-opacity,1))}.text-emerald-300{--tw-text-opacity:1;color:rgb(110 231 183/var(--tw-text-opacity,1))}.text-emerald-400{--tw-text-opacity:1;color:rgb(52 211 153/var(--tw-text-opacity,1))}.text-indigo-200{--tw-text-opacity:1;color:rgb(199 210 254/var(--tw-text-opacity,1))}.text-indigo-300{--tw-text-opacity:1;color:rgb(165 180 252/var(--tw-text-opacity,1))}.text-indigo-400{--tw-text-opacity:1;color:rgb(129 140 248/var(--tw-text-opacity,1))}.text-orange-300{--tw-text-opacity:1;color:rgb(253 186 116/var(--tw-text-opacity,1))}.text-orange-400{--tw-text-opacity:1;color:rgb(251 146 60/var(--tw-text-opacity,1))}.text-orange-500{--tw-text-opacity:1;color:rgb(249 115 22/var(--tw-text-opacity,1))}.text-red-300{--tw-text-opacity:1;color:rgb(252 165 165/var(--tw-text-opacity,1))}.text-red-400{--tw-text-opacity:1;color:rgb(248 113 113/var(--tw-text-opacity,1))}.text-sky-300{--tw-text-opacity:1;color:rgb(125 211 252/var(--tw-text-opacity,1))}.text-slate-100{--tw-text-opacity:1;color:rgb(241 245 249/var(--tw-text-opacity,1))}.text-slate-200{--tw-text-opacity:1;color:rgb(226 232 240/var(--tw-text-opacity,1))}.text-slate-300{--tw-text-opacity:1;color:rgb(203 213 225/var(--tw-text-opacity,1))}.text-slate-400{--tw-text-opacity:1;color:rgb(148 163 184/var(--tw-text-opacity,1))}.text-slate-500{--tw-text-opacity:1;color:rgb(100 116 139/var(--tw-text-opacity,1))}.text-slate-950{--tw-text-opacity:1;color:rgb(2 6 23/var(--tw-text-opacity,1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255/var(--tw-text-opacity,1))}.accent-emerald-500{accent-color:#10b981}.shadow{--tw-shadow:0 1px 3px 0 rgba(0,0,0,.1),0 1px 2px -1px rgba(0,0,0,.1);--tw-shadow-colored:0 1px 3px 0 var(--tw-shadow-color),0 1px 2px -1px var(--tw-shadow-color)}.shadow,.shadow-2xl{box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-2xl{--tw-shadow:0 25px 50px -12px rgba(0,0,0,.25);--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color)}.shadow-lg{--tw-shadow:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -4px rgba(0,0,0,.1);--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color),0 4px 6px -4px var(--tw-shadow-color)}.shadow-lg,.shadow-xl{box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-xl{--tw-shadow:0 20px 25px -5px rgba(0,0,0,.1),0 8px 10px -6px rgba(0,0,0,.1);--tw-shadow-colored:0 20px 25px -5px var(--tw-shadow-color),0 8px 10px -6px var(--tw-shadow-color)}.shadow-emerald-500{--tw-shadow-color:#10b981;--tw-shadow:var(--tw-shadow-colored)}.outline-none{outline:2px solid transparent;outline-offset:2px}.outline{outline-style:solid}.blur{--tw-blur:blur(8px)}.blur,.grayscale{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.grayscale{--tw-grayscale:grayscale(100%)}.filter{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.backdrop-blur-md{--tw-backdrop-blur:blur(12px)}.backdrop-blur-md,.backdrop-filter{-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.transition{transition-property:color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,-webkit-backdrop-filter;transition-property:color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter;transition-property:color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter,-webkit-backdrop-filter;transition-timing-function:cubic-bezier(.4,0,.2,1);transition-duration:.15s}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(.4,0,.2,1);transition-duration:.15s}.ease-in-out{transition-timing-function:cubic-bezier(.4,0,.2,1)}.hover\:bg-emerald-400:hover{--tw-bg-opacity:1;background-color:rgb(52 211 153/var(--tw-bg-opacity,1))}.hover\:bg-slate-700:hover{--tw-bg-opacity:1;background-color:rgb(51 65 85/var(--tw-bg-opacity,1))}.hover\:bg-slate-800:hover{--tw-bg-opacity:1;background-color:rgb(30 41 59/var(--tw-bg-opacity,1))}.hover\:text-white:hover{--tw-text-opacity:1;color:rgb(255 255 255/var(--tw-text-opacity,1))}.hover\:shadow-emerald-500\/40:hover{--tw-shadow-color:rgba(16,185,129,.4);--tw-shadow:var(--tw-shadow-colored)}.focus\:border-emerald-300:focus{--tw-border-opacity:1;border-color:rgb(110 231 183/var(--tw-border-opacity,1))}.focus\:border-emerald-400:focus{--tw-border-opacity:1;border-color:rgb(52 211 153/var(--tw-border-opacity,1))}.focus\:outline-none:focus{outline:2px solid transparent;outline-offset:2px}.active\:scale-95:active{--tw-scale-x:.95;--tw-scale-y:.95;transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}@media (min-width:768px){.md\:col-span-2{grid-column:span 2/span 2}.md\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.md\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}}@media (min-width:1024px){.lg\:col-span-2{grid-column:span 2/span 2}.lg\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.lg\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.lg\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.lg\:flex-row{flex-direction:row}.lg\:items-center{align-items:center}.lg\:text-3xl{font-size:1.875rem;line-height:2.25rem}}@media (min-width:1280px){.xl\:col-span-3{grid-column:span 3/span 3}.xl\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.xl\:grid-cols-7{grid-template-columns:repeat(7,minmax(0,1fr))}}/*TW-END*/</style>
+</head>
+
+<body class="p-5 max-w-lg mx-auto pb-28">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
+    <!-- TOAST NOTIFICATION BOX -->
+    <div id="toastBox" class="w-11/12 max-w-md p-4 rounded-2xl glass-card border-l-4 shadow-2xl flex items-center gap-3">
+        <span id="toastIcon" class="text-xl">ℹ️</span>
+        <div id="toastMsg" class="text-xs font-bold text-white flex-1"></div>
+    </div>
+
+    <!-- CUSTOM CONFIRMATION MODAL -->
+    <div id="confirmModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[150] hidden items-center justify-center p-4">
+        <div class="glass-card max-w-md w-full p-6 relative border border-emerald-500/40 animate-pop space-y-4">
+            <div class="flex items-center gap-3">
+                <div class="p-3 bg-emerald-500/20 text-emerald-400 rounded-2xl text-xl">⚠️</div>
+                <h3 id="confirmTitle" class="text-base font-extrabold text-white">Konfirmasi Opsi 50%</h3>
+            </div>
+            <p id="confirmMsg" class="text-xs text-slate-300 leading-relaxed"></p>
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <button type="button" id="confirmCancelBtn" class="py-3 bg-slate-800 text-slate-300 rounded-xl font-bold text-xs uppercase hover:bg-slate-700">Batal</button>
+                <button type="button" id="confirmOkBtn" class="py-3 bg-emerald-500 text-slate-950 rounded-xl font-extrabold text-xs uppercase shadow-lg hover:bg-emerald-400">Ya, Aktifkan</button>
+            </div>
+        </div>
+    </div>
+
+    <header class="flex justify-between items-center mb-8 pt-2 relative z-10">
+        <h1 class="text-2xl font-extrabold tracking-tight text-white uppercase">
+            TMR<span class="text-emerald-400 italic">LOADER</span>
+        </h1>
+        <div id="clock" class="text-xs font-extrabold bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 px-4 py-2 rounded-xl backdrop-blur-md">00:00</div>
+    </header>
+
+    <form id="tmrForm" class="space-y-6 relative z-10">
+        <!-- OPERATOR & SHIFT SELECTION -->
+        <div class="glass-card p-6 space-y-4">
+            <div>
+                <label class="block text-[11px] font-extrabold text-emerald-400 uppercase mb-2 tracking-wider">Nama Operator</label>
+                <div class="electric-green-wrap">
+                    <select id="opSel" required class="w-full neo-input p-4 text-sm">
+                        <option value="" disabled selected>PILIH OPERATOR</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-extrabold text-emerald-400 uppercase mb-2 tracking-wider">Shift Kerja</label>
+                <div class="electric-green-wrap">
+                    <select id="shSel" required class="w-full neo-input p-4 text-sm">
+                        <option value="Pagi">SHIFT 1 (PAGI)</option>
+                        <option value="Siang">SHIFT 2 (SIANG)</option>
+                        <option value="Malam">SHIFT 3 (MALAM)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- PEN SELECTION -->
+        <div class="glass-card p-6">
+            <div class="flex justify-between items-center mb-5">
+                <h3 class="text-xs font-extrabold text-slate-300 uppercase tracking-wider italic">Pilih Pen (Maks 4)</h3>
+                <span id="pCount" class="text-xs font-black bg-emerald-500 text-slate-950 px-3 py-1 rounded-full shadow">0/4</span>
+            </div>
+            <div id="pCon" class="space-y-3 max-h-64 overflow-y-auto pr-1"></div>
+
+            <div id="tonaseBox" class="mt-5 hidden bg-slate-900/80 border border-emerald-500/30 rounded-2xl p-4 space-y-3">
+                <div>
+                    <h3 class="text-xs font-extrabold text-emerald-400 uppercase tracking-wider italic">Persentase Tonase</h3>
+                    <p id="tonaseNote" class="text-[10px] font-semibold text-slate-400 mt-1">Khusus Shift Pagi untuk pen yang ada di Sheet Pen A2:A9.</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="tonase-option cursor-pointer">
+                        <input type="radio" name="tonasePct" value="25" class="hidden" checked>
+                        <div class="tonase-pill bg-slate-800 text-slate-200 rounded-xl p-3 text-center">
+                            <div class="text-2xl font-black">25%</div>
+                            <div class="text-[10px] font-bold uppercase">1 Mixer</div>
+                        </div>
+                    </label>
+                    <label class="tonase-option cursor-pointer">
+                        <input type="radio" name="tonasePct" value="50" class="hidden">
+                        <div class="tonase-pill bg-slate-800 text-slate-200 rounded-xl p-3 text-center">
+                            <div class="text-2xl font-black">50%</div>
+                            <div class="text-[10px] font-bold uppercase">2x Tonase</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- TARGET & AKTUAL PAKAN -->
+        <div class="space-y-5">
+            <div class="target-card">
+                <span class="text-emerald-400 font-extrabold text-xs tracking-widest uppercase">TARGET SISA</span>
+                <div id="t-sisa" class="target-val my-4">0</div>
+                <input type="number" id="a-sisa" placeholder="AKTUAL" class="w-full max-w-[200px] neo-input p-3 text-center text-lg">
+            </div>
+
+            <div class="target-card">
+                <span class="text-emerald-400 font-extrabold text-xs tracking-widest uppercase">TARGET ODOT</span>
+                <div id="t-odot" class="target-val my-4">0</div>
+                <input type="number" id="a-odot" placeholder="AKTUAL" class="w-full max-w-[200px] neo-input p-3 text-center text-lg">
+            </div>
+
+            <div class="target-card">
+                <span class="text-emerald-400 font-extrabold text-xs tracking-widest uppercase">TARGET JAGUNG</span>
+                <div id="t-jagung" class="target-val my-4">0</div>
+                <input type="number" id="a-jagung" placeholder="AKTUAL" class="w-full max-w-[200px] neo-input p-3 text-center text-lg">
+            </div>
+
+            <div class="target-card">
+                <span class="text-emerald-400 font-extrabold text-xs tracking-widest uppercase">TARGET SILASE</span>
+                <div id="t-silase" class="target-val my-4">0</div>
+                <input type="number" id="a-silase" placeholder="AKTUAL" class="w-full max-w-[200px] neo-input p-3 text-center text-lg">
+            </div>
+            
+            <div class="bg-gradient-to-br from-emerald-600 to-teal-800 p-8 rounded-[35px] text-center shadow-2xl relative overflow-hidden border border-emerald-400/30">
+                <span class="text-xs font-black text-emerald-200 uppercase block mb-2 tracking-widest italic">Target Konsentrat</span>
+                <div id="t-kon" class="text-7xl font-extrabold text-white mb-6">0</div>
+                <input type="number" id="a-kon" placeholder="AKTUAL" class="w-full bg-slate-900/80 border border-white/30 rounded-2xl p-4 text-center font-extrabold text-2xl text-white outline-none focus:border-emerald-300">
+            </div>
+        </div>
+
+        <!-- DIGITAL MOLASES FLOW -->
+        <div class="glass-card p-6 space-y-5">
+            <h2 class="text-center text-xs font-extrabold text-slate-300 uppercase tracking-widest italic">Digital Molases Flow</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="electric-green-wrap">
+                    <input type="number" id="m-s" placeholder="Awal" class="w-full neo-input p-4 text-center text-sm">
+                </div>
+                <div class="electric-green-wrap">
+                    <input type="number" id="m-a" placeholder="Akhir" class="w-full neo-input p-4 text-center text-sm">
+                </div>
+            </div>
+            <div class="flex justify-between items-center bg-slate-900/90 p-5 rounded-2xl border border-white/10">
+                <span class="text-xs font-extrabold text-emerald-400 uppercase italic">Total KG</span>
+                <span class="text-3xl font-extrabold text-white" id="m-h">0</span>
+            </div>
+            <div id="helperWrap">
+                <label class="block text-[11px] font-extrabold text-emerald-400 uppercase mb-2 tracking-wider">Helper Penuang Molases</label>
+                <div class="electric-green-wrap">
+                    <select id="helperSel" class="w-full neo-input p-4 text-sm">
+                        <option value="" disabled selected>PILIH HELPER</option>
+                    </select>
+                </div>
+            </div>
+            <div id="mixerWrap">
+                <label class="block text-[11px] font-extrabold text-emerald-400 uppercase mb-2 tracking-wider">Unit Mixer</label>
+                <div class="electric-green-wrap">
+                    <select id="mixerSel" class="w-full neo-input p-4 text-sm">
+                        <option value="" disabled selected>PILIH MIXER</option>
+                        <option value="Trioliet">Trioliet</option>
+                        <option value="Supreme">Supreme</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- STATUS OFFLINE & AUTO-SYNC -->
+        <div class="glass-card p-6 space-y-4">
+            <div class="flex justify-between items-center gap-3">
+                <div>
+                    <h2 class="text-xs font-extrabold text-slate-300 uppercase tracking-wider italic">Status Offline</h2>
+                    <p class="text-[10px] font-semibold text-slate-400 mt-1">Sistem auto-sync setiap 5 menit jika ada sinyal</p>
+                </div>
+                <span id="netStatus" class="status-pill status-online">ONLINE</span>
+            </div>
+
+            <div class="flex justify-between items-center bg-slate-900/80 p-4 rounded-xl border border-white/10">
+                <span class="text-xs font-bold text-slate-300 uppercase">Pending offline</span>
+                <span id="offlineCount" class="text-lg font-extrabold text-white">0</span>
+            </div>
+
+            <button type="button" id="syncBtn" class="sync-btn w-full">SYNC DATA OFFLINE</button>
+        </div>
+
+        <div id="submitStatusBox" class="hidden p-4 rounded-2xl text-xs font-bold uppercase tracking-wide"></div>
+
+        <!-- VALIDASI DEVIASI & GEMINI AI ANALYZER -->
+        <div class="glass-card p-6 space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-xs font-extrabold text-slate-300 uppercase tracking-wider italic">Validasi Aktual vs Target</h3>
+                <button type="button" onclick="analyzeRationWithGemini()" class="ai-btn flex items-center gap-1.5 text-xs">
+                    <span>✨</span> Analisis AI
+                </button>
+            </div>
+            <div id="devBox" class="space-y-3 text-xs font-semibold text-slate-400">Isi aktual untuk melihat selisih per bahan.</div>
+        </div>
+
+        <!-- SUBMIT BUTTON -->
+        <button type="submit" id="btn" disabled class="btn-locked w-full font-extrabold py-5 rounded-2xl text-xl shadow-2xl transition-all">
+            PILIH OPERATOR TERLEBIH DAHULU
+        </button>
+    </form>
+
+    <!-- GEMINI AI ANALYSIS MODAL -->
+    <div id="aiModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] hidden items-center justify-center p-4">
+        <div class="glass-card max-w-md w-full p-6 relative border border-indigo-500/40 animate-pop">
+            <button onclick="closeAiModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white font-bold text-lg">✕</button>
+            <div class="flex items-center gap-2 mb-3">
+                <div class="p-2 bg-indigo-500/20 text-indigo-400 rounded-xl">✨</div>
+                <div>
+                    <h3 class="text-lg font-extrabold text-white">Analisis Nutrisi Gemini AI</h3>
+                    <p class="text-[10px] font-bold text-indigo-300 uppercase">Smart TMR Quality Check</p>
+                </div>
+            </div>
+
+            <div id="aiLoading" class="py-12 text-center space-y-3">
+                <div class="inline-block w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                <p class="text-xs font-bold text-indigo-300 uppercase animate-pulse">Menganalisis rasio pakan & nutrisi TMR...</p>
+            </div>
+
+            <div id="aiResult" class="hidden text-xs text-slate-200 leading-relaxed space-y-3 max-h-80 overflow-y-auto pr-1"></div>
+
+            <button onclick="closeAiModal()" class="w-full mt-5 ai-btn py-3 uppercase">Tutup Evaluasi AI</button>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = "https://script.google.com/macros/s/AKfycbwdmVQ2hm--S6GPbpyTVEnq3y9FMrlPQO5XE9ebu0_YPEpx-i-_qZgyCH_urmQ4wi7-ow/exec"; 
+        const API_URL = BASE_URL + "?app=loader";
+        
+        const CACHE_KEY = "tmr_loader_master_cache_v1";
+        const OFFLINE_QUEUE_KEY = "tmr_loader_offline_queue_v12";
+        const LOCAL_LOCK_KEY = "tmr_loader_pen_locks_v124";
+
+        // "Hari operasional" berganti jam 04:00 (bukan 00:00). Nilai ini disamakan dengan Code.gs (DAY_START_HOUR)
+        let DAY_START_HOUR = 4;
+        let TONASE_SPECIAL_PENS = new Set();
+        const DEFAULT_SPECIAL_TONASE_PENS = [
+            "FRESH - (5B)", "EARLY - (5B)", "EARLY - (5A)", "EARLY - (4B)",
+            "LATE - (4A)", "LATE - (3B)", "LATE - (3A)", "LATE - (2A)"
+        ];
+        let DB = null;
+
+        // CUSTOM TOAST NOTIFICATION
+        function showToast(message, type = "info") {
+            const box = document.getElementById("toastBox");
+            const msg = document.getElementById("toastMsg");
+            const icon = document.getElementById("toastIcon");
+
+            msg.innerText = message;
+            if (type === "error") {
+                icon.innerText = "❌";
+                box.style.borderLeftColor = "#ef4444";
+            } else if (type === "success") {
+                icon.innerText = "✅";
+                box.style.borderLeftColor = "#10b981";
+            } else {
+                icon.innerText = "ℹ️";
+                box.style.borderLeftColor = "#f59e0b";
+            }
+
+            box.classList.add("show");
+            setTimeout(() => box.classList.remove("show"), 4000);
+        }
+
+        // CUSTOM CONFIRM MODAL
+        function showConfirmModal(title, msg, onConfirm) {
+            const modal = document.getElementById("confirmModal");
+            document.getElementById("confirmTitle").innerText = title;
+            document.getElementById("confirmMsg").innerText = msg;
+
+            const okBtn = document.getElementById("confirmOkBtn");
+            const cancelBtn = document.getElementById("confirmCancelBtn");
+
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+
+            const close = () => {
+                modal.classList.add("hidden");
+                modal.classList.remove("flex");
+            };
+
+            okBtn.onclick = () => { close(); onConfirm(true); };
+            cancelBtn.onclick = () => { close(); onConfirm(false); };
+        }
+
+        async function callGeminiApi(prompt, systemInstruction = "") {
+            // API key TIDAK ada di halaman ini. Panggilan AI lewat backend (Script Properties).
+            let lastErr;
+            for (let i = 0; i < 2; i++) {
+                try {
+                    const res = await fetch(BASE_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ formType: 'gemini', prompt, systemInstruction })
+                    });
+                    const json = await res.json();
+                    if (json && json.ok && json.text) return json.text;
+                    throw new Error((json && json.message) || "Respon AI tidak valid");
+                } catch (err) {
+                    lastErr = err;
+                    if (/GEMINI_API_KEY|ramai/.test(String(err && err.message))) break;
+                    await new Promise(r => setTimeout(r, 1200));
+                }
+            }
+            throw lastErr;
+        }
+
+
+        async function analyzeRationWithGemini() {
+            const sel = Array.from(document.querySelectorAll('.pen-cb:checked')).map(c => c.value);
+            if (sel.length === 0) return showToast("Pilih minimal 1 PEN terlebih dahulu!", "error");
+
+            const modal = document.getElementById("aiModal");
+            const loading = document.getElementById("aiLoading");
+            const result = document.getElementById("aiResult");
+
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+            loading.classList.remove("hidden");
+            result.classList.add("hidden");
+
+            const op = document.getElementById("opSel").value || "Operator";
+            const shift = document.getElementById("shSel").value || "Shift";
+
+            const dataBatch = {
+                operator: op,
+                shift: shift,
+                pens: sel.join(", "),
+                sisa: { target: document.getElementById("t-sisa").innerText, actual: document.getElementById("a-sisa").value || "0" },
+                odot: { target: document.getElementById("t-odot").innerText, actual: document.getElementById("a-odot").value || "0" },
+                jagung: { target: document.getElementById("t-jagung").innerText, actual: document.getElementById("a-jagung").value || "0" },
+                silase: { target: document.getElementById("t-silase").innerText, actual: document.getElementById("a-silase").value || "0" },
+                konsentrat: { target: document.getElementById("t-kon").innerText, actual: document.getElementById("a-kon").value || "0" },
+                molases: document.getElementById("m-h").innerText || "0"
+            };
+
+            const systemPrompt = "Anda adalah Ahli Nutrisi Sapi Perah (Dairy Nutritionist) dan Supervisor TMR profesional. Analisis akurasi timbangan pakan loader ini secara singkat, padat, dan instruktif dalam bahasa Indonesia. Berikan skor akurasi (0-100), soroti deviasi kritis (jika ada selisih >5%), serta dampaknya terhadap pencernaan/produksi susu sapi perah.";
+            const userQuery = `Berikut data muatan mixer TMR saat ini:
+Operator: ${dataBatch.operator} | Shift: ${dataBatch.shift} | Pen: ${dataBatch.pens}
+1. Sisa Feed: Target ${dataBatch.sisa.target} kg, Aktual ${dataBatch.sisa.actual} kg
+2. Rumput Odot: Target ${dataBatch.odot.target} kg, Aktual ${dataBatch.odot.actual} kg
+3. Teplan/Jagung: Target ${dataBatch.jagung.target} kg, Aktual ${dataBatch.jagung.actual} kg
+4. Silase: Target ${dataBatch.silase.target} kg, Aktual ${dataBatch.silase.actual} kg
+5. Konsentrat: Target ${dataBatch.konsentrat.target} kg, Aktual ${dataBatch.konsentrat.actual} kg
+6. Molases Total: ${dataBatch.molases} kg
+
+Berikan analisis ringkas dengan format:
+- **Skor Akurasi TMR**: [Nilai/100]
+- **Ringkasan Deviasi**: [Singkat]
+- **Dampak Nutrisi/Sapi**: [Catatan nutrisi/serat]
+- **Rekomendasi Operasional**: [Langkah cepat operator]`;
+
+            try {
+                const text = await callGeminiApi(userQuery, systemPrompt);
+                loading.classList.add("hidden");
+                result.classList.remove("hidden");
+                result.innerHTML = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\*\*(.*?)\*\*/g, '<strong class="text-indigo-300">$1</strong>').replace(/\n/g, '<br>');
+            } catch (err) {
+                loading.classList.add("hidden");
+                result.classList.remove("hidden");
+                result.innerHTML = '<p class="text-red-400 font-bold">Gagal menghubungkan ke Gemini AI. Pastikan jaringan terhubung.</p>';
+            }
+        }
+
+        function closeAiModal() { document.getElementById("aiModal").classList.add("hidden"); }
+
+        function loadLocalCache() {
+            try {
+                const cached = localStorage.getItem(CACHE_KEY);
+                if (cached) {
+                    DB = JSON.parse(cached);
+                    // Cache dari hari operasional lain: buang riwayat agar pen tidak terkunci palsu saat offline
+                    if (DB._cacheDay !== todayKey()) DB.history = [];
+                    populateOperators();
+                    render();
+                    updateDeviationBox();
+                }
+            } catch(e) { console.error("Gagal baca cache lokal:", e); }
+        }
+
+        function saveLocalCache(data) {
+            try {
+                data._cacheDay = todayKey(); // tandai hari operasional saat cache disimpan
+                localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+            } catch(e){}
+        }
+
+        function populateOperators() {
+            if (!DB) return;
+            const specialSource = (DB.specialTonasePens && DB.specialTonasePens.length) ? DB.specialTonasePens : DEFAULT_SPECIAL_TONASE_PENS;
+            TONASE_SPECIAL_PENS = new Set(specialSource.map(cleanPenName));
+
+            const op = document.getElementById('opSel');
+            const currentSelected = op.value;
+            op.innerHTML = '<option value="" disabled selected>PILIH OPERATOR</option>';
+
+            if (DB.users) {
+                DB.users.forEach(u => {
+                    const sel = (u === currentSelected) ? 'selected' : '';
+                    op.innerHTML += `<option value="${u}" ${sel}>${u}</option>`;
+                });
+            }
+            if (currentSelected) op.value = currentSelected;
+
+            populateHelpers();
+        }
+
+        // Daftar helper (sheet Users kolom C). Jika belum ada daftar, pilihan helper disembunyikan & tidak wajib.
+        function helperRequired() { return !!(DB && Array.isArray(DB.helpers) && DB.helpers.length > 0); }
+
+        function populateHelpers() {
+            const sel = document.getElementById('helperSel');
+            const wrap = document.getElementById('helperWrap');
+            if (!sel || !wrap) return;
+            wrap.classList.toggle('hidden', !helperRequired());
+            const cur = sel.value;
+            sel.innerHTML = '<option value="" disabled selected>PILIH HELPER</option>';
+            ((DB && DB.helpers) || []).forEach(h => {
+                const o = document.createElement('option');
+                o.value = h; o.textContent = h;
+                sel.appendChild(o);
+            });
+            if (cur) sel.value = cur;
+        }
+
+        async function fetchFreshData(keepSelection = false) {
+            try {
+                const res = await fetch(API_URL + "&t=" + Date.now());
+                const fresh = await res.json();
+                if (fresh && fresh.users) {
+                    const h = Number(fresh.dayStartHour);
+                    if (fresh.dayStartHour !== undefined && Number.isFinite(h)) DAY_START_HOUR = h;
+                    DB = fresh;
+                    saveLocalCache(fresh);
+                    populateOperators();
+                    render(keepSelection);
+                    updateDeviationBox();
+                    LOADED_DAY_KEY = todayKey();
+                }
+            } catch (err) { console.warn("Koneksi gagal, menggunakan data lokal:", err); }
+        }
+
+        async function init() {
+            loadLocalCache();
+            await fetchFreshData();
+            validateOperatorLock();
+        }
+
+        function validateOperatorLock() {
+            const opVal = document.getElementById('opSel').value;
+            const btn = document.getElementById('btn');
+
+            if (!opVal || opVal === "" || opVal === "PILIH OPERATOR") {
+                btn.disabled = true;
+                btn.className = "btn-locked w-full font-extrabold py-5 rounded-2xl text-xl shadow-2xl transition-all";
+                btn.innerText = "PILIH OPERATOR TERLEBIH DAHULU";
+            } else if (helperRequired() && !document.getElementById('helperSel').value) {
+                btn.disabled = true;
+                btn.className = "btn-locked w-full font-extrabold py-5 rounded-2xl text-xl shadow-2xl transition-all";
+                btn.innerText = "PILIH HELPER PENUANG MOLASES";
+            } else if (!document.getElementById('mixerSel').value) {
+                btn.disabled = true;
+                btn.className = "btn-locked w-full font-extrabold py-5 rounded-2xl text-xl shadow-2xl transition-all";
+                btn.innerText = "PILIH UNIT MIXER";
+            } else {
+                btn.disabled = false;
+                btn.className = "w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-5 rounded-2xl text-xl shadow-xl hover:shadow-emerald-500/40 active:scale-95 transition-all cursor-pointer";
+                btn.innerText = "SIMPAN & START MIXING";
+            }
+        }
+
+        document.getElementById('opSel').addEventListener('change', validateOperatorLock);
+        document.getElementById('helperSel').addEventListener('change', validateOperatorLock);
+        document.getElementById('mixerSel').addEventListener('change', validateOperatorLock);
+
+        function normalizePens(pens) {
+            if (Array.isArray(pens)) return pens.map(p => String(p).trim()).filter(Boolean);
+            return String(pens || "").split(",").map(p => p.trim()).filter(Boolean);
+        }
+
+        function cleanPenName(p) {
+            return String(p || "").toUpperCase().replace(/[–—]/g, "-").replace(/\s+/g, " ").trim();
+        }
+
+        function isSpecialTonasePen(p) {
+            return TONASE_SPECIAL_PENS.has(cleanPenName(p));
+        }
+
+        // Kunci hari operasional: jam 00:00-03:59 masih dihitung hari sebelumnya, reset tepat jam DAY_START_HOUR
+        function todayKey() {
+            const d = new Date(Date.now() - DAY_START_HOUR * 3600 * 1000);
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        }
+
+        let LOADED_DAY_KEY = todayKey();
+
+        // Dipanggil berkala: jika sudah lewat jam reset, status pen langsung dikosongkan tanpa perlu reload
+        function checkDayRollover() {
+            const nowKey = todayKey();
+            if (nowKey === LOADED_DAY_KEY) return;
+            LOADED_DAY_KEY = nowKey;
+            if (DB) DB.history = [];
+            render(true);
+            updateDeviationBox();
+            showToast(`Hari operasional baru (jam ${String(DAY_START_HOUR).padStart(2,'0')}.00). Status pen sudah di-reset.`, "success");
+            if (navigator.onLine) fetchFreshData(true);
+        }
+
+        function isSavingNow() {
+            const b = document.getElementById('btn');
+            return !!b && b.innerText.indexOf('MENYIMPAN') >= 0;
+        }
+
+        setInterval(checkDayRollover, 30 * 1000);
+        setInterval(() => { if (!document.hidden && navigator.onLine && !isSavingNow()) fetchFreshData(true); }, 3 * 60 * 1000);
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) return;
+            checkDayRollover();
+            if (navigator.onLine && !isSavingNow()) fetchFreshData(true);
+        });
+
+        function getLocalPenLocks() {
+            try {
+                const all = JSON.parse(localStorage.getItem(LOCAL_LOCK_KEY) || '{}');
+                return all[todayKey()] || {};
+            } catch (e) { return {}; }
+        }
+
+        function addLocalPenLocks(payload) {
+            if (!payload || !Array.isArray(payload.pens)) return;
+            const key = todayKey();
+            let all = {};
+            try { all = JSON.parse(localStorage.getItem(LOCAL_LOCK_KEY) || '{}'); } catch (e) { all = {}; }
+            all[key] = all[key] || {};
+            const count = Number(payload.processCountValue || 1);
+            payload.pens.forEach(p => {
+                const lockKey = `${payload.shift}||${cleanPenName(p)}`;
+                all[key][lockKey] = Math.max(Number(all[key][lockKey] || 0), count);
+            });
+            Object.keys(all).forEach(k => { if (k !== key) delete all[k]; });
+            localStorage.setItem(LOCAL_LOCK_KEY, JSON.stringify(all));
+        }
+
+        function getHistoryTonasePercent(h) {
+            const countRaw = h.processCountValue ?? h.processCount ?? h.jumlahProses ?? h.countProcess ?? '';
+            const countParsed = parseFloat(String(countRaw).replace(',', '.').trim());
+            if (!isNaN(countParsed) && countParsed >= 2) return 50;
+
+            const raw = h.tonasePercent ?? h.percentTonase ?? h.percent ?? h.persen ?? h.persentase ?? h.percentLabel ?? h.tonaseLabel ?? "";
+            const parsed = parseFloat(String(raw).replace("%", "").trim());
+
+            if (!isNaN(parsed) && parsed > 0) return parsed;
+
+            const note = String(h.tonaseNote || h.note || "").toLowerCase();
+            if (note.includes("50")) return 50;
+            if (note.includes("25")) return 25;
+
+            return 25;
+        }
+
+        function getHistoryPenProcessCount(pName, shiftName) {
+            let total = 0;
+            const localLocks = getLocalPenLocks();
+            const localCnt = Number(localLocks[`${shiftName}||${cleanPenName(pName)}`] || 0);
+
+            if (!DB || !DB.history) return localCnt;
+
+            DB.history.forEach(h => {
+                const hShift = h.shift || h.Shift || h.SHIFT;
+                const hPens = normalizePens(h.pens || h.pen || h.Pens || h.PEN);
+
+                if (hShift === shiftName && hPens.includes(pName)) {
+                    const procVal = Number(h.processCountValue || h.processCount || 0);
+                    if (procVal >= 2) {
+                        total += procVal;
+                    } else {
+                        const pct = getHistoryTonasePercent(h);
+                        if (shiftName === "Pagi" && isSpecialTonasePen(pName) && pct >= 50) {
+                            total += 2;
+                        } else {
+                            total += 1;
+                        }
+                    }
+                }
+            });
+
+            return Math.max(total, localCnt);
+        }
+
+        function render(keepSelection = false) {
+            const sh = document.getElementById('shSel').value;
+            const con = document.getElementById('pCon');
+            // Saat refresh otomatis, pen yang sedang dipilih operator jangan sampai hilang
+            const prevSelected = keepSelection
+                ? new Set(Array.from(document.querySelectorAll('.pen-cb:checked')).map(c => c.value))
+                : new Set();
+            con.innerHTML = '';
+
+            if (!DB || !DB.pens) return;
+
+            DB.pens.forEach(p => {
+                let cnt = getHistoryPenProcessCount(p, sh);
+
+                let sClass = cnt === 1 ? "pen-done-1x" : (cnt >= 2 ? "pen-locked-2x" : "pen-normal");
+                let sLabel = cnt === 1 ? '● Done 1x' : (cnt >= 2 ? '✖ Locked 2x' : '');
+                let dis = cnt >= 2; // KUNCI JIKA SUDAH 2X PROSES
+
+                const lbl = document.createElement('label');
+                lbl.className = `electric-pen flex justify-between p-4 rounded-xl items-center transition-all ${sClass} ${dis ? 'pointer-events-none' : 'cursor-pointer hover:bg-slate-800'}`;
+
+                lbl.innerHTML = `
+                    <div class="flex flex-col">
+                        <span class="font-bold text-sm text-slate-100">${p}</span>
+                        <span class="text-[9px] font-black uppercase text-amber-400">${sLabel}</span>
+                    </div>
+                    <input type="checkbox" value="${p}" ${dis ? 'disabled' : ''} class="pen-cb w-5 h-5 accent-emerald-500 rounded">
+                `;
+
+                lbl.querySelector('input').addEventListener('change', handleSelection);
+                con.appendChild(lbl);
+            });
+
+            if (prevSelected.size) {
+                con.querySelectorAll('.pen-cb').forEach(cb => {
+                    if (prevSelected.has(cb.value) && !cb.disabled) cb.checked = true;
+                });
+            }
+            if (keepSelection) handleSelection();
+        }
+
+        function handleSelection() {
+            const selCount = document.querySelectorAll('.pen-cb:checked').length;
+            const allCbs = document.querySelectorAll('.pen-cb');
+
+            document.getElementById('pCount').innerText = selCount + "/4";
+
+            allCbs.forEach(cb => {
+                if (selCount >= 4 && !cb.checked) {
+                    cb.disabled = true;
+                    cb.parentElement.classList.add('pen-disabled-limit');
+                } else { 
+                    let pName = cb.value;
+                    let sh = document.getElementById('shSel').value;
+                    let hCnt = getHistoryPenProcessCount(pName, sh);
+
+                    if (hCnt < 2) {
+                        cb.disabled = false;
+                        cb.parentElement.classList.remove('pen-disabled-limit');
+                    }
+                }
+            });
+
+            calc();
+        }
+
+        function getSelectedTonasePercent() {
+            const checked = document.querySelector('input[name="tonasePct"]:checked');
+            return checked ? parseFloat(checked.value) : 25;
+        }
+
+        function shouldShowTonaseBox() {
+            const sh = document.getElementById('shSel').value;
+            const sel = Array.from(document.querySelectorAll('.pen-cb:checked')).map(c => c.value);
+            return sh === 'Pagi' && sel.some(isSpecialTonasePen);
+        }
+
+        function selectedSpecialPensWithHistory() {
+            const sh = document.getElementById('shSel').value;
+            const sel = Array.from(document.querySelectorAll('.pen-cb:checked')).map(c => c.value);
+
+            return sel
+                .filter(isSpecialTonasePen)
+                .map(p => ({
+                    pen: p,
+                    count: getHistoryPenProcessCount(p, sh)
+                }))
+                .filter(x => x.count >= 1);
+        }
+
+        function updateTonaseBox() {
+            const box = document.getElementById('tonaseBox');
+            const note = document.getElementById('tonaseNote');
+            const sh = document.getElementById('shSel').value;
+            const sel = Array.from(document.querySelectorAll('.pen-cb:checked')).map(c => c.value);
+            const specialSelected = sel.filter(isSpecialTonasePen);
+            
+            const opt50 = document.querySelector('input[name="tonasePct"][value="50"]');
+            const opt25 = document.querySelector('input[name="tonasePct"][value="25"]');
+            const opt50Label = opt50 ? opt50.closest('label') : null;
+            const already1x = selectedSpecialPensWithHistory();
+
+            if (sh === 'Pagi' && specialSelected.length) {
+                box.classList.remove('hidden');
+
+                if (already1x.length) {
+                    opt25.checked = true;
+                    if (opt50) opt50.disabled = true;
+                    if (opt50Label) opt50Label.classList.add('tonase-disabled');
+                    note.innerText = `50% dikunci karena ${already1x.map(x => x.pen).join(', ')} sudah pernah proses 1x. Gunakan 25% agar tidak melebihi limit 2x.`;
+                } else {
+                    if (opt50) opt50.disabled = false;
+                    if (opt50Label) opt50Label.classList.remove('tonase-disabled');
+                    note.innerText = `Aktif untuk: ${specialSelected.join(', ')}. Pilih 50% = dihitung 2x proses dan setelah submit pen langsung LOCKED.`;
+                }
+            } else {
+                box.classList.add('hidden');
+                opt25.checked = true;
+                if (opt50) opt50.disabled = false;
+                if (opt50Label) opt50Label.classList.remove('tonase-disabled');
+                note.innerText = 'Khusus Shift Pagi untuk pen yang ada di Sheet Pen A2:A9.';
+            }
+        }
+
+        // Target tonase (jumlah semua pen terpilih, sudah termasuk faktor 25%/50%). Dipakai layar & snapshot saat simpan.
+        function computeTargets() {
+            const sh = document.getElementById('shSel').value;
+            const sel = Array.from(document.querySelectorAll('.pen-cb:checked')).map(c => c.value);
+            const tonasePct = getSelectedTonasePercent();
+
+            let t = { s:0, o:0, j:0, si:0, k:0 };
+
+            if (DB && DB.targets && sel.length > 0) {
+                let row = -1;
+                for (let i = 0; i < DB.targets.length; i++) {
+                    if (DB.targets[i][0] === sh) { row = i; break; }
+                }
+
+                if (row !== -1) {
+                    sel.forEach(p => {
+                        for (let j = row + 1; j < DB.targets.length; j++) { 
+                            if (DB.targets[j][0] === p) {
+                                const factor = (sh === 'Pagi' && isSpecialTonasePen(p)) ? (tonasePct / 25) : 1;
+                                t.s += (parseFloat(DB.targets[j][1]) || 0) * factor;
+                                t.o += (parseFloat(DB.targets[j][2]) || 0) * factor;
+                                t.j += (parseFloat(DB.targets[j][3]) || 0) * factor;
+                                t.si += (parseFloat(DB.targets[j][4]) || 0) * factor;
+                                t.k += (parseFloat(DB.targets[j][5]) || 0) * factor;
+                                break;
+                            }
+                            if (["Pagi","Siang","Malam"].includes(DB.targets[j][0])) break; 
+                        }
+                    });
+                }
+            }
+
+            return t;
+        }
+
+        function calc() {
+            updateTonaseBox();
+            const t = computeTargets();
+
+            ['t-sisa','t-odot','t-jagung','t-silase','t-kon'].forEach((id, i) => {
+                document.getElementById(id).innerText = Math.round(Object.values(t)[i]);
+            });
+
+            updateDeviationBox();
+        }
+
+        document.getElementById('m-s').oninput = document.getElementById('m-a').oninput = () => {
+            let r = (parseFloat(document.getElementById('m-a').value) || 0) - (parseFloat(document.getElementById('m-s').value) || 0);
+            document.getElementById('m-h').innerText = r > 0 ? Math.round(r) : 0;
+        };
+
+        function getStore(key) {
+            try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch (e) { return []; }
+        }
+
+        function setStore(key, data) { localStorage.setItem(key, JSON.stringify(data)); }
+
+        function saveOffline(payload) {
+            const queue = getStore(OFFLINE_QUEUE_KEY);
+            const id = String(payload.clientId || '');
+            const idx = queue.findIndex(x => String(x.clientId || '') === id && id);
+            if (idx >= 0) queue[idx] = payload;
+            else queue.push(payload);
+            setStore(OFFLINE_QUEUE_KEY, queue);
+            updateOfflineBadge();
+        }
+
+        function removeOffline(clientId) {
+            const id = String(clientId || '');
+            if (!id) return;
+            const queue = getStore(OFFLINE_QUEUE_KEY).filter(x => String(x.clientId || '') !== id);
+            setStore(OFFLINE_QUEUE_KEY, queue);
+            updateOfflineBadge();
+        }
+
+        function showSubmitStatus(type, message) {
+            const box = document.getElementById('submitStatusBox');
+            if (!box) return;
+            box.classList.remove('hidden');
+            box.className = 'p-4 rounded-2xl text-xs font-bold uppercase tracking-wide ' +
+                (type === 'server' ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/30' : (type === 'offline' ? 'bg-amber-950/80 text-amber-400 border border-amber-500/30' : 'bg-slate-900 text-slate-300 border border-slate-700'));
+            box.innerText = message;
+        }
+
+        function updateOfflineBadge() {
+            const pending = getStore(OFFLINE_QUEUE_KEY).length;
+            document.getElementById('offlineCount').innerText = pending;
+            document.getElementById('netStatus').innerText = navigator.onLine ? 'ONLINE' : 'OFFLINE';
+            document.getElementById('netStatus').className = 'status-pill ' + (navigator.onLine ? 'status-online' : 'status-offline');
+
+            if (pending > 0) {
+                showSubmitStatus('offline', `${pending} data belum masuk server. Auto-sync berjalan setiap 5 menit.`);
+            }
+        }
+
+        async function postPayload(payload) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 18000);
+
+            try {
+                const res = await fetch(BASE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload),
+                    signal: controller.signal
+                });
+
+                const text = await res.text();
+                if (!res.ok) throw new Error('Server tidak menerima data');
+
+                let json = {};
+                try { json = text ? JSON.parse(text) : {}; } catch (e) { json = {}; }
+
+                if (json && (json.ok === false || json.success === false || String(json.status || '').toLowerCase() === 'error')) {
+                    throw new Error(json.message || 'Server menolak data');
+                }
+                return json;
+            } finally { clearTimeout(timeoutId); }
+        }
+
+        async function syncOfflineQueue(silent = false) {
+            let queue = getStore(OFFLINE_QUEUE_KEY);
+            if (!queue.length) {
+                updateOfflineBadge();
+                if (!silent) showToast("Tidak ada data offline yang perlu di-sync.", "info");
+                return;
+            }
+
+            const btnSync = document.getElementById('syncBtn');
+            btnSync.disabled = true;
+            btnSync.innerText = 'MENYINKRONKAN...';
+
+            const failed = [];
+            let successCount = 0;
+
+            for (const item of queue) {
+                try {
+                    await postPayload(item);
+                    successCount++;
+                } catch (e) { failed.push(item); }
+            }
+
+            setStore(OFFLINE_QUEUE_KEY, failed);
+            updateOfflineBadge();
+            btnSync.disabled = false;
+            btnSync.innerText = 'SYNC DATA OFFLINE';
+
+            if (failed.length) {
+                showSubmitStatus('offline', `${failed.length} data masih pending.`);
+                if (!silent) showToast(`${failed.length} data masih gagal sync.`, "error");
+            } else {
+                showSubmitStatus('server', `AUTO-SYNC BERHASIL. ${successCount} data masuk server.`);
+                if (!silent) showToast("Semua data offline berhasil di-sync!", "success");
+            }
+        }
+
+        function getActualValue(id) { return parseFloat(document.getElementById(id).value) || 0; }
+
+        function updateDeviationBox() {
+            const rows = [
+                { name: "Sisa", target: parseFloat(document.getElementById("t-sisa").innerText) || 0, actual: getActualValue("a-sisa") },
+                { name: "Odot", target: parseFloat(document.getElementById("t-odot").innerText) || 0, actual: getActualValue("a-odot") },
+                { name: "Jagung", target: parseFloat(document.getElementById("t-jagung").innerText) || 0, actual: getActualValue("a-jagung") },
+                { name: "Silase", target: parseFloat(document.getElementById("t-silase").innerText) || 0, actual: getActualValue("a-silase") },
+                { name: "Konsentrat", target: parseFloat(document.getElementById("t-kon").innerText) || 0, actual: getActualValue("a-kon") }
+            ];
+
+            const box = document.getElementById("devBox");
+            if (!box) return;
+
+            const hasTargetOrActual = rows.some(r => r.target > 0 || r.actual > 0);
+            if (!hasTargetOrActual) {
+                box.innerHTML = "Isi aktual untuk melihat selisih per bahan.";
+                return;
+            }
+
+            box.innerHTML = rows.map(r => {
+                const diff = r.actual - r.target;
+                const pct = r.target > 0 ? (diff / r.target) * 100 : 0;
+                const abs = Math.abs(pct);
+                let bg = "bg-emerald-950/50", text = "text-emerald-400", label = "OK";
+                
+                if (!r.actual || r.actual <= 0) { bg = "bg-slate-900/80"; text = "text-slate-400"; label = "BELUM DIISI"; }
+                else if (abs > 10) { bg = "bg-red-950/50"; text = "text-red-400"; label = "WARNING"; }
+                else if (abs > 5) { bg = "bg-amber-950/50"; text = "text-amber-400"; label = "CHECK"; }
+
+                return `
+                    <div class="${bg} p-3.5 rounded-xl border border-white/10 flex justify-between items-center gap-3">
+                        <div>
+                            <div class="font-bold text-slate-100">${r.name}</div>
+                            <div class="text-[10px] text-slate-300 font-semibold">Target ${Math.round(r.target)} | Aktual ${Math.round(r.actual)}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold ${text}">${label}</div>
+                            <div class="text-[10px] text-slate-300 font-semibold">${Math.round(diff)} kg (${pct.toFixed(1)}%)</div>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        ["a-sisa","a-odot","a-jagung","a-silase","a-kon"].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener("input", updateDeviationBox);
+        });
+
+        function snapshotTarget() {
+            const t = computeTargets();
+            return {
+                sisa: Math.round(t.s), odot: Math.round(t.o), jagung: Math.round(t.j),
+                silase: Math.round(t.si), konsentrat: Math.round(t.k),
+                pct: shouldShowTonaseBox() ? getSelectedTonasePercent() : 100
+            };
+        }
+
+        document.getElementById('tmrForm').onsubmit = async (e) => {
+            e.preventDefault();
+
+            const opSel = document.getElementById('opSel').value;
+            if (!opSel || opSel === "" || opSel === "PILIH OPERATOR") {
+                showToast("Harap pilih Nama Operator terlebih dahulu!", "error");
+                return;
+            }
+
+            const helperVal = document.getElementById('helperSel').value;
+            if (helperRequired() && !helperVal) {
+                showToast("Harap pilih Helper penuang molases!", "error");
+                return;
+            }
+
+            const mixerVal = document.getElementById('mixerSel').value;
+            if (!mixerVal) {
+                showToast("Harap pilih Unit Mixer (Trioliet / Supreme)!", "error");
+                return;
+            }
+
+            const b = document.getElementById('btn');
+            const sel = Array.from(document.querySelectorAll('.pen-cb:checked')).map(c => c.value);
+            if (sel.length === 0) return showToast("Pilih minimal 1 PEN!", "error");
+
+            if (shouldShowTonaseBox() && getSelectedTonasePercent() === 50) {
+                const already1x = selectedSpecialPensWithHistory();
+                if (already1x.length) {
+                    document.querySelector('input[name="tonasePct"][value="25"]').checked = true;
+                    calc();
+                    showToast("50% dibatalkan. Ada pen yang sudah 1x sehingga 50% akan melewati limit 2x.", "error");
+                    return;
+                }
+            }
+
+            b.disabled = true;
+            b.innerText = "SEDANG MENYIMPAN...";
+
+            const p = {
+                formType: "loader",
+                clientId: 'LDR-' + Date.now(),
+                createdAtLocal: new Date().toISOString(),
+                operator: opSel,
+                shift: document.getElementById('shSel').value,
+                pens: sel,
+                tonasePercent: shouldShowTonaseBox() ? getSelectedTonasePercent() : 100,
+                processCountValue: (shouldShowTonaseBox() && getSelectedTonasePercent() === 50) ? 2 : 1,
+                aktual: {
+                    sisa: document.getElementById('a-sisa').value,
+                    odot: document.getElementById('a-odot').value,
+                    jagung: document.getElementById('a-jagung').value,
+                    silase: document.getElementById('a-silase').value,
+                    konsentrat: document.getElementById('a-kon').value
+                },
+                molases: {
+                    sebelum: document.getElementById('m-s').value,
+                    akhir: document.getElementById('m-a').value,
+                    total: document.getElementById('m-h').innerText
+                },
+                helperMolases: helperVal || '',
+                mixerUnit: mixerVal,
+                target: snapshotTarget()      // riwayat target saat batch ini disimpan (dipakai rapor akurasi)
+            };
+
+            saveOffline(p);
+
+            try {
+                await postPayload(p);
+                removeOffline(p.clientId);
+                addLocalPenLocks(p);
+                showSubmitStatus('server', 'TERSIMPAN DI SERVER / SPREADSHEET');
+                showToast("BERHASIL TERSIMPAN DI SERVER!", "success");
+                setTimeout(() => location.reload(), 1200);
+            } catch (err) {
+                addLocalPenLocks(p);
+                showSubmitStatus('offline', 'SINYAL/SERVER GAGAL. DATA DISIMPAN LOKAL.');
+                showToast("Koneksi/server gagal. Data aman tersimpan di HP ini.", "info");
+                setTimeout(() => location.reload(), 1200);
+            }
+        };
+
+        setInterval(() => { if (navigator.onLine) syncOfflineQueue(true); }, 5 * 60 * 1000);
+
+        document.getElementById('syncBtn').addEventListener('click', () => syncOfflineQueue(false));
+        window.addEventListener('online', () => { updateOfflineBadge(); syncOfflineQueue(true); });
+        window.addEventListener('offline', updateOfflineBadge);
+        
+        setInterval(() => {
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' }).replace(':', '.');
+        }, 1000);
+
+        document.querySelectorAll('input[name="tonasePct"]').forEach(r => {
+            r.addEventListener('click', (e) => {
+                const targetVal = parseFloat(e.target.value);
+                const opt25 = document.querySelector('input[name="tonasePct"][value="25"]');
+                const opt50 = document.querySelector('input[name="tonasePct"][value="50"]');
+
+                if (targetVal === 50) {
+                    const already1x = selectedSpecialPensWithHistory();
+
+                    if (already1x.length) {
+                        showToast("50% tidak bisa dipilih karena ada pen yang sudah pernah proses 1x.", "error");
+                        opt25.checked = true;
+                        calc();
+                    } else {
+                        showConfirmModal(
+                            "Konfirmasi Opsi 50% (2x Tonase)",
+                            "Mode 50% aktif. Pen khusus Fresh/Early/Late akan dihitung sebagai 2x proses dan setelah submit pen akan langsung LOCKED 2x. Lanjutkan?",
+                            (isConfirmed) => {
+                                if (isConfirmed) {
+                                    opt50.checked = true;
+                                    calc();
+                                    showToast("Mode 50% (2x Tonase) diaktifkan.", "success");
+                                } else {
+                                    opt25.checked = true;
+                                    calc();
+                                }
+                            }
+                        );
+                    }
+                } else {
+                    calc();
+                }
+            });
+        });
+
+        document.getElementById('shSel').addEventListener('change', () => { render(); updateTonaseBox(); calc(); });
+        window.onload = init;
+    </script>
+</body>
+</html>

@@ -1,0 +1,631 @@
+// =====================================================================
+//  BACKEND INPUTAN BAHAN KERING HELPER  (Google Apps Script)
+//  Fitur:
+//   - doGet  : master data + log hari ini + SISA BAHAN KERING (Sisa_Bahan_Kering)
+//   - doGet?action=sisa  : hanya data sisa stok (ringan, dipakai untuk refresh)
+//   - doGet?action=rapor : rekap rapor helper per periode (Log_Timbangan + Arsip)
+//   - doPost : simpan timbangan (dengan LockService agar tidak bentrok)
+//   - arsipLogHarian()   : pindah log hari-hari sebelumnya ke arsip (trigger tengah malam)
+//   - setupTriggerArsip(): jalankan SEKALI dari editor untuk memasang trigger
+// =====================================================================
+
+// ===== KONFIGURASI =====
+var SHEET_LOG   = "Log_Timbangan";
+var SHEET_ARSIP = "Arsip Log_Timbangan";
+var SHEET_SISA  = "Sisa_Bahan_Kering";
+var LOG_COLS    = 9;                 // Timestamp .. Batch ID (kolom A-I)
+var LOG_HEADERS = [
+  "Timestamp", "Operator", "Shift", "Pen/Kandang", "Nama Bahan",
+  "Target (KG)", "Aktual (KG)", "Selisih (KG)", "Batch ID"
+];
+
+// Saat arsip berjalan: Stock Awal di Sisa_Bahan_Kering dikurangi usage log yang
+// dipindahkan, supaya Estimasi Sisa tidak "loncat naik" ketika Log_Timbangan dikosongkan.
+// Set false jika Stock Awal Anda isi manual/ditimpa sendiri setiap hari.
+var ROLL_STOK_AWAL = true;
+
+// Penilaian rapor helper
+var TOLERANSI_PERSEN = 2;    // timbangan dianggap "sesuai" jika selisih <= 2% dari target
+var TOLERANSI_MIN_KG = 0.1;  // ...atau selisih <= 0,1 kg (untuk target kecil)
+var GRADE_TABLE = [          // berdasarkan % item sesuai toleransi
+  { min: 90, huruf: "A", predikat: "Sangat Baik" },
+  { min: 80, huruf: "B", predikat: "Baik" },
+  { min: 70, huruf: "C", predikat: "Cukup" },
+  { min: 0,  huruf: "D", predikat: "Perlu Pembinaan" }
+];
+
+// =====================================================================
+//  doGet
+// =====================================================================
+function doGet(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var tz = Session.getScriptTimeZone();
+  var today = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd");
+
+  var action = (e && e.parameter && e.parameter.action) ? String(e.parameter.action) : "";
+
+  if (action === "sisa") {
+    return jsonOutput_({ sisa: getSisa_(ss), server_date: today });
+  }
+  if (action === "rapor") {
+    return getRapor_(ss, tz, today, e.parameter);
+  }
+
+  // 1. Ambil data operator
+  var sheetUser = ss.getSheetByName("User");
+  var users = [];
+  if (sheetUser && sheetUser.getLastRow() > 1) {
+    users = sheetUser.getRange(2, 1, sheetUser.getLastRow() - 1, 1)
+      .getValues()
+      .map(function(r) { return r[0]; })
+      .filter(String);
+  }
+
+  // 2. Ambil data pen
+  var sheetPen = ss.getSheetByName("Pen");
+  var pens = [];
+  if (sheetPen && sheetPen.getLastRow() > 1) {
+    pens = sheetPen.getRange(2, 1, sheetPen.getLastRow() - 1, 1)
+      .getValues()
+      .map(function(r) { return r[0]; })
+      .filter(String);
+  }
+
+  // 3. Ambil bahan pakan
+  var sheetBahan = ss.getSheetByName("Bahan Kering");
+  var rincianPakan = [];
+  if (sheetBahan && sheetBahan.getLastRow() > 1) {
+    var headers = sheetBahan.getRange(1, 1, 1, sheetBahan.getLastColumn()).getValues()[0];
+    var bahanData = sheetBahan.getRange(2, 1, sheetBahan.getLastRow() - 1, sheetBahan.getLastColumn()).getValues();
+
+    for (var i = 0; i < bahanData.length; i++) {
+      var penName = bahanData[i][0];
+      var shiftName = bahanData[i][2];
+      if (!penName || !shiftName) continue;
+
+      var listBahan = [];
+      for (var j = 3; j < headers.length; j++) {
+        var bobot = parseFloat(bahanData[i][j]) || 0;
+        if (bobot > 0) {
+          listBahan.push({
+            nama_bahan: headers[j],
+            target_bobot: bobot
+          });
+        }
+      }
+
+      rincianPakan.push({
+        pen: penName,
+        shift: shiftName,
+        bahan: listBahan
+      });
+    }
+  }
+
+  // 4. Ambil histori timbangan HARI INI saja untuk status 1x / 2x DONE
+  var sheetLog = ss.getSheetByName(SHEET_LOG);
+  ensureLogHeader_(sheetLog);
+
+  var logData = [];
+  if (sheetLog && sheetLog.getLastRow() > 1) {
+    var values = sheetLog.getRange(2, 1, sheetLog.getLastRow() - 1, sheetLog.getLastColumn()).getValues();
+
+    values.forEach(function(r) {
+      var timestamp = r[0];
+      if (!timestamp) return;
+
+      var rowDate = Utilities.formatDate(new Date(timestamp), tz, "yyyy-MM-dd");
+      if (rowDate !== today) return;
+
+      logData.push({
+        timestamp: timestamp,
+        tanggal: rowDate,
+        operator: r[1],
+        shift: r[2],
+        pen: r[3],
+        bahan: r[4],
+        target: r[5],
+        aktual: r[6],
+        selisih: r[7],
+        batch_id: r[8] || ""
+      });
+    });
+  }
+
+  // 5. Sisa bahan kering (sheet Sisa_Bahan_Kering, kolom Estimasi Sisa)
+  var sisa = getSisa_(ss);
+
+  var responseData = {
+    operators: users,
+    pens: pens,
+    master_pakan: rincianPakan,
+    log: logData,
+    sisa: sisa,
+    server_date: today
+  };
+
+  return jsonOutput_(responseData);
+}
+
+// =====================================================================
+//  doPost
+// =====================================================================
+function doPost(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetLog = ss.getSheetByName(SHEET_LOG);
+
+  if (!sheetLog) {
+    sheetLog = ss.insertSheet(SHEET_LOG);
+  }
+  ensureLogHeader_(sheetLog);
+
+  var lock = LockService.getScriptLock();
+
+  try {
+    lock.waitLock(20000);
+
+    var logs = JSON.parse(e.postData.contents);
+    if (!Array.isArray(logs) || logs.length === 0) {
+      return jsonOutput_({ status: "error", message: "Payload kosong." });
+    }
+
+    var tz = Session.getScriptTimeZone();
+    var now = new Date();
+    var today = Utilities.formatDate(now, tz, "yyyy-MM-dd");
+    var batchId = "FM-" + Utilities.formatDate(now, tz, "yyyyMMdd-HHmmss") + "-" + Math.floor(Math.random() * 1000);
+
+    var shift = logs[0].shift;
+    var penGabungan = logs[0].pen;
+    var selectedPens = String(penGabungan).split(',').map(function(p) {
+      return p.trim();
+    }).filter(String);
+
+    // Hitung jumlah batch hari ini per pen + shift.
+    var existingJobs = countExistingJobsToday_(sheetLog, today, tz);
+
+    var lockedPens = [];
+    selectedPens.forEach(function(penName) {
+      var key = penName + "-" + shift;
+      if ((existingJobs[key] || 0) >= 2) {
+        lockedPens.push(penName);
+      }
+    });
+
+    if (lockedPens.length > 0) {
+      return jsonOutput_({
+        status: "locked",
+        message: "Pen sudah mencapai batas 2x timbang hari ini: " + lockedPens.join(', '),
+        locked: lockedPens
+      });
+    }
+
+    var rows = [];
+    var added = [];
+
+    logs.forEach(function(item) {
+      var target = parseFloat(item.target) || 0;
+      var aktual = parseFloat(item.aktual) || 0;
+      var selisih = aktual - target;
+
+      rows.push([
+        now,
+        item.operator,
+        item.shift,
+        item.pen,
+        item.nama_bahan,
+        target,
+        aktual,
+        selisih,
+        batchId
+      ]);
+
+      added.push(item.pen + " - " + item.nama_bahan);
+    });
+
+    if (rows.length > 0) {
+      sheetLog.getRange(sheetLog.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+      SpreadsheetApp.flush(); // pastikan rumus Estimasi Sisa sudah terhitung sebelum app refresh
+    }
+
+    return jsonOutput_({
+      status: "success",
+      batch_id: batchId,
+      added: added
+    });
+
+  } catch (err) {
+    return jsonOutput_({
+      status: "error",
+      message: err.toString()
+    });
+  } finally {
+    try { lock.releaseLock(); } catch (x) {}
+  }
+}
+
+// =====================================================================
+//  SISA BAHAN KERING
+// =====================================================================
+// Membaca sheet Sisa_Bahan_Kering. Kolom dicari lewat judul header
+// (Nama Item / Stock Awal / usage / Estimasi Sisa); jika tidak ketemu
+// dipakai urutan A, B, C, D.
+function getSisa_(ss) {
+  var sh = ss.getSheetByName(SHEET_SISA);
+  if (!sh || sh.getLastRow() < 2) return [];
+
+  var lastCol = Math.max(sh.getLastColumn(), 4);
+  var data = sh.getRange(1, 1, sh.getLastRow(), lastCol).getDisplayValues();
+  var raw  = sh.getRange(1, 1, sh.getLastRow(), lastCol).getValues();
+  var idx = mapSisaColumns_(data[0]);
+
+  var out = [];
+  for (var i = 1; i < data.length; i++) {
+    var nama = String(data[i][idx.nama]).trim();
+    if (!nama) continue;
+    out.push({
+      nama_item: nama,
+      stock_awal: round3_(toNum_(raw[i][idx.awal])),
+      usage: round3_(toNum_(raw[i][idx.usage])),
+      estimasi_sisa: round3_(toNum_(raw[i][idx.estimasi]))
+    });
+  }
+  return out;
+}
+
+function mapSisaColumns_(headerRow) {
+  var idx = { nama: 0, awal: 1, usage: 2, estimasi: 3 };
+  for (var c = 0; c < headerRow.length; c++) {
+    var h = String(headerRow[c]).toLowerCase().trim();
+    if (!h) continue;
+    if (h.indexOf("estimasi") > -1) idx.estimasi = c;
+    else if (h.indexOf("awal") > -1) idx.awal = c;
+    else if (h.indexOf("usage") > -1 || h.indexOf("pakai") > -1 || h.indexOf("pemakaian") > -1) idx.usage = c;
+    else if (h.indexOf("nama") > -1 || h.indexOf("item") > -1) idx.nama = c;
+  }
+  return idx;
+}
+
+// =====================================================================
+//  ARSIP OTOMATIS (TRIGGER TENGAH MALAM)
+// =====================================================================
+// Memindahkan semua baris Log_Timbangan yang tanggalnya SEBELUM hari ini
+// ke sheet "Arsip Log_Timbangan". Baris hari ini tetap di Log_Timbangan.
+function arsipLogHarian() {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) {
+    Logger.log("Arsip dibatalkan: script sedang dipakai proses lain.");
+    return;
+  }
+
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var tz = Session.getScriptTimeZone();
+    var todayStr = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd");
+
+    var sheetLog = ss.getSheetByName(SHEET_LOG);
+    if (!sheetLog || sheetLog.getLastRow() <= 1) {
+      Logger.log("Tidak ada log untuk diarsipkan.");
+      return;
+    }
+
+    var numRows = sheetLog.getLastRow() - 1;
+    var values = sheetLog.getRange(2, 1, numRows, LOG_COLS).getValues();
+
+    var move = [];
+    var keep = [];
+    values.forEach(function(r) {
+      var ts = r[0];
+      if (!ts) {
+        if (r.join("") !== "") keep.push(r); // baris setengah kosong: biarkan
+        return;
+      }
+      var rowDate = Utilities.formatDate(new Date(ts), tz, "yyyy-MM-dd");
+      if (rowDate < todayStr) move.push(r);
+      else keep.push(r);
+    });
+
+    if (move.length === 0) {
+      Logger.log("Tidak ada baris lama untuk diarsipkan.");
+      return;
+    }
+
+    // 1) Tambahkan ke sheet arsip
+    var arsip = ss.getSheetByName(SHEET_ARSIP);
+    if (!arsip) arsip = ss.insertSheet(SHEET_ARSIP);
+    if (arsip.getLastRow() === 0) {
+      arsip.appendRow(LOG_HEADERS);
+    }
+    if (arsip.getMaxColumns() < LOG_COLS) {
+      arsip.insertColumnsAfter(arsip.getMaxColumns(), LOG_COLS - arsip.getMaxColumns());
+    }
+    arsip.getRange(arsip.getLastRow() + 1, 1, move.length, LOG_COLS).setValues(move);
+
+    // 2) Geser Stock Awal agar Estimasi Sisa tetap konsisten setelah log dikosongkan
+    if (ROLL_STOK_AWAL) {
+      rollStokAwal_(ss, move);
+    }
+
+    // 3) Tulis ulang Log_Timbangan hanya dengan baris yang dipertahankan
+    sheetLog.getRange(2, 1, numRows, LOG_COLS).clearContent();
+    if (keep.length > 0) {
+      sheetLog.getRange(2, 1, keep.length, LOG_COLS).setValues(keep);
+    }
+    SpreadsheetApp.flush();
+
+    Logger.log("Arsip selesai: " + move.length + " baris dipindahkan, " + keep.length + " baris tetap.");
+  } finally {
+    try { lock.releaseLock(); } catch (x) {}
+  }
+}
+
+// Stock Awal (baru) = Stock Awal (lama) - total aktual baris yang diarsipkan.
+// Sel Stock Awal yang berisi rumus tidak disentuh.
+function rollStokAwal_(ss, movedRows) {
+  var sh = ss.getSheetByName(SHEET_SISA);
+  if (!sh || sh.getLastRow() < 2) return;
+
+  var usage = {};
+  movedRows.forEach(function(r) {
+    var k = normName_(r[4]);
+    if (!k) return;
+    usage[k] = (usage[k] || 0) + toNum_(r[6]);
+  });
+
+  var lastRow = sh.getLastRow();
+  var lastCol = Math.max(sh.getLastColumn(), 4);
+  var header = sh.getRange(1, 1, 1, lastCol).getDisplayValues()[0];
+  var idx = mapSisaColumns_(header);
+
+  var namaVals = sh.getRange(2, idx.nama + 1, lastRow - 1, 1).getValues();
+  var awalRange = sh.getRange(2, idx.awal + 1, lastRow - 1, 1);
+  var awalVals = awalRange.getValues();
+  var awalFormulas = awalRange.getFormulas();
+
+  for (var i = 0; i < namaVals.length; i++) {
+    var k = normName_(namaVals[i][0]);
+    if (!k || !usage.hasOwnProperty(k)) continue;
+
+    if (awalFormulas[i][0]) {
+      Logger.log("Stock Awal baris " + (i + 2) + " berisi rumus, dilewati.");
+      continue;
+    }
+    var baru = round3_(toNum_(awalVals[i][0]) - usage[k]);
+    sh.getRange(i + 2, idx.awal + 1).setValue(baru);
+  }
+}
+
+// Jalankan fungsi ini SEKALI dari editor Apps Script (Run > setupTriggerArsip)
+// dan berikan izin. Trigger berjalan setiap hari sekitar 00:00 - 00:15 WIB.
+function setupTriggerArsip() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === "arsipLogHarian") ScriptApp.deleteTrigger(t);
+  });
+
+  ScriptApp.newTrigger("arsipLogHarian")
+    .timeBased()
+    .everyDays(1)
+    .atHour(0)
+    .nearMinute(5)
+    .inTimezone("Asia/Jakarta")
+    .create();
+
+  Logger.log("Trigger arsip harian terpasang.");
+}
+
+// =====================================================================
+//  RAPOR HELPER
+// =====================================================================
+// GET ?action=rapor&from=yyyy-MM-dd&to=yyyy-MM-dd&helper=NAMA (helper opsional)
+function getRapor_(ss, tz, today, params) {
+  try {
+    var dateRe = /^\d{4}-\d{2}-\d{2}$/;
+    var to = (params.to && dateRe.test(params.to)) ? params.to : today;
+    var from = (params.from && dateRe.test(params.from)) ? params.from : to;
+    var helper = params.helper ? String(params.helper).trim() : "";
+
+    if (from > to) {
+      return jsonOutput_({ status: "error", message: "Tanggal awal lebih besar dari tanggal akhir." });
+    }
+
+    var fromDate = Utilities.parseDate(from + " 00:00:00", tz, "yyyy-MM-dd HH:mm:ss");
+    var toDate = Utilities.parseDate(to + " 23:59:59", tz, "yyyy-MM-dd HH:mm:ss");
+
+    var rows = [];
+    [SHEET_ARSIP, SHEET_LOG].forEach(function(name) {
+      var sh = ss.getSheetByName(name);
+      if (!sh || sh.getLastRow() < 2) return;
+      var values = sh.getRange(2, 1, sh.getLastRow() - 1, LOG_COLS).getValues();
+      values.forEach(function(r) {
+        var ts = r[0];
+        if (!ts) return;
+        var d = (ts instanceof Date) ? ts : new Date(ts);
+        if (isNaN(d.getTime()) || d < fromDate || d > toDate) return;
+        rows.push({ d: d, r: r });
+      });
+    });
+
+    var ops = {};
+    rows.forEach(function(item) {
+      var r = item.r;
+      var op = String(r[1]).trim();
+      if (!op) return;
+      if (helper && op !== helper) return;
+
+      var tanggal = Utilities.formatDate(item.d, tz, "yyyy-MM-dd");
+      var target = toNum_(r[5]);
+      var aktual = toNum_(r[6]);
+      var selisih = aktual - target;
+      var absDev = Math.abs(selisih);
+      var tol = Math.max(target * TOLERANSI_PERSEN / 100, TOLERANSI_MIN_KG);
+      var sesuai = absDev <= tol;
+      var batchKey = r[8] || (tanggal + "|" + r[2] + "|" + r[3]);
+      var bahan = String(r[4]).trim() || "(tanpa nama)";
+
+      var o = ops[op];
+      if (!o) {
+        o = ops[op] = {
+          nama: op, item: 0, batch: {}, hari: {},
+          total_target: 0, total_aktual: 0, abs_dev: 0,
+          sesuai: 0, lebih: 0, kurang: 0, bahan: {}
+        };
+      }
+      o.item++;
+      o.batch[batchKey] = true;
+      o.hari[tanggal] = true;
+      o.total_target += target;
+      o.total_aktual += aktual;
+      o.abs_dev += absDev;
+      if (sesuai) o.sesuai++;
+      else if (selisih > 0) o.lebih++;
+      else o.kurang++;
+
+      var b = o.bahan[bahan];
+      if (!b) b = o.bahan[bahan] = { nama: bahan, n: 0, target: 0, aktual: 0, abs_dev: 0, sesuai: 0 };
+      b.n++;
+      b.target += target;
+      b.aktual += aktual;
+      b.abs_dev += absDev;
+      if (sesuai) b.sesuai++;
+    });
+
+    var operators = Object.keys(ops).sort().map(function(k) {
+      var o = ops[k];
+      var skor = o.item > 0 ? (o.sesuai / o.item) * 100 : 0;
+      var akurasi = o.total_target > 0 ? Math.max(0, 100 - (o.abs_dev / o.total_target) * 100) : 0;
+      var g = gradeFor_(skor);
+
+      var bahanList = Object.keys(o.bahan).sort().map(function(bk) {
+        var b = o.bahan[bk];
+        return {
+          nama: b.nama,
+          n: b.n,
+          target: round3_(b.target),
+          aktual: round3_(b.aktual),
+          abs_dev: round3_(b.abs_dev),
+          sesuai: b.sesuai
+        };
+      });
+
+      return {
+        nama: o.nama,
+        hari_kerja: Object.keys(o.hari).length,
+        batch: Object.keys(o.batch).length,
+        item: o.item,
+        total_target: round3_(o.total_target),
+        total_aktual: round3_(o.total_aktual),
+        selisih_bersih: round3_(o.total_aktual - o.total_target),
+        akurasi: Math.round(akurasi * 10) / 10,
+        sesuai: o.sesuai,
+        lebih: o.lebih,
+        kurang: o.kurang,
+        skor_sesuai: Math.round(skor * 10) / 10,
+        grade: g.huruf,
+        predikat: g.predikat,
+        bahan: bahanList
+      };
+    });
+
+    return jsonOutput_({
+      status: "ok",
+      from: from,
+      to: to,
+      helper: helper,
+      toleransi_persen: TOLERANSI_PERSEN,
+      toleransi_min_kg: TOLERANSI_MIN_KG,
+      grade_table: GRADE_TABLE,
+      operators: operators
+    });
+  } catch (err) {
+    return jsonOutput_({ status: "error", message: err.toString() });
+  }
+}
+
+function gradeFor_(skor) {
+  for (var i = 0; i < GRADE_TABLE.length; i++) {
+    if (skor >= GRADE_TABLE[i].min) return GRADE_TABLE[i];
+  }
+  return GRADE_TABLE[GRADE_TABLE.length - 1];
+}
+
+// =====================================================================
+//  HELPER UMUM
+// =====================================================================
+function ensureLogHeader_(sheetLog) {
+  if (!sheetLog) return;
+
+  var headers = LOG_HEADERS;
+
+  if (sheetLog.getLastRow() === 0) {
+    sheetLog.appendRow(headers);
+    return;
+  }
+
+  var lastCol = Math.max(sheetLog.getLastColumn(), headers.length);
+  var currentHeaders = sheetLog.getRange(1, 1, 1, lastCol).getValues()[0];
+
+  for (var i = 0; i < headers.length; i++) {
+    if (!currentHeaders[i]) {
+      sheetLog.getRange(1, i + 1).setValue(headers[i]);
+    }
+  }
+
+  // Jika sheet lama belum punya Batch ID, tambahkan di kolom I.
+  if (sheetLog.getRange(1, 9).getValue() !== "Batch ID") {
+    sheetLog.getRange(1, 9).setValue("Batch ID");
+  }
+}
+
+function countExistingJobsToday_(sheetLog, today, tz) {
+  var result = {};
+  if (!sheetLog || sheetLog.getLastRow() <= 1) return result;
+
+  var values = sheetLog.getRange(2, 1, sheetLog.getLastRow() - 1, sheetLog.getLastColumn()).getValues();
+  var uniqueJobs = {};
+
+  values.forEach(function(r) {
+    var timestamp = r[0];
+    var shift = r[2];
+    var penGabungan = r[3];
+    var batchId = r[8] || "";
+
+    if (!timestamp || !shift || !penGabungan) return;
+
+    var rowDate = Utilities.formatDate(new Date(timestamp), tz, "yyyy-MM-dd");
+    if (rowDate !== today) return;
+
+    // Untuk log lama yang belum punya Batch ID, dianggap 1 job per kombinasi pen gabungan + shift + tanggal.
+    var jobKey = batchId || (rowDate + "|" + shift + "|" + penGabungan);
+    if (uniqueJobs[jobKey]) return;
+    uniqueJobs[jobKey] = true;
+
+    String(penGabungan).split(',').forEach(function(p) {
+      var penName = p.trim();
+      if (!penName) return;
+
+      var counterKey = penName + "-" + shift;
+      result[counterKey] = (result[counterKey] || 0) + 1;
+    });
+  });
+
+  return result;
+}
+
+function toNum_(v) {
+  if (typeof v === "number") return v;
+  if (v === null || v === undefined || v === "") return 0;
+  var n = parseFloat(String(v).trim().replace(",", "."));
+  return isNaN(n) ? 0 : n;
+}
+
+function round3_(n) {
+  return Math.round(n * 1000) / 1000;
+}
+
+function normName_(s) {
+  return String(s || "").trim().replace(/\s+/g, " ").toUpperCase();
+}
+
+function jsonOutput_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}

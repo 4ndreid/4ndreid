@@ -1,0 +1,2283 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#030712">
+<title>Live Monitoring - TMR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+:root {
+    --bg-dark: #030712;
+    --card-bg: rgba(15, 23, 42, 0.78);
+    --card-border: rgba(255, 255, 255, 0.12);
+    color-scheme: dark;
+}
+
+body {
+    background-color: var(--bg-dark) !important;
+    color: #f8fafc;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* Latar: gradient biasa (jauh lebih ringan daripada blur 120px di HP kelas menengah) */
+.orb { position: fixed; border-radius: 50%; z-index: 0; pointer-events: none; }
+.orb-1 { width: 520px; height: 520px; top: -160px; left: -160px; background: radial-gradient(circle, rgba(5,150,105,.28), transparent 68%); }
+.orb-2 { width: 460px; height: 460px; bottom: -140px; right: -140px; background: radial-gradient(circle, rgba(59,130,246,.24), transparent 68%); }
+
+.panel {
+    background: var(--card-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--card-border);
+    border-radius: 22px;
+    box-shadow: 0 18px 36px -16px rgba(0, 0, 0, 0.55);
+    position: relative;
+    z-index: 10;
+}
+
+.shift-column {
+    background: rgba(15, 23, 42, 0.62);
+    border-radius: 24px;
+    border: 1px solid var(--card-border);
+    min-height: 240px;
+}
+
+.log-card { background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 12px 14px; }
+.card-active { background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(255,255,255,0.15); border-left: 5px solid #f59e0b; }
+.card-ready { border-left-color: #10b981; }
+
+.label { font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #94a3b8; }
+
+.btn { border-radius: 999px; padding: 10px 18px; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #fff; transition: transform .15s ease, opacity .15s ease; white-space: nowrap; }
+.btn:hover:not(:disabled) { transform: translateY(-1px); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn-green { background: linear-gradient(135deg, #10b981, #059669); }
+.btn-indigo { background: linear-gradient(135deg, #6366f1, #4f46e5); box-shadow: 0 0 14px rgba(99,102,241,.4); }
+.btn-red { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.btn-ghost { background: rgba(51, 65, 85, .7); border: 1px solid rgba(255,255,255,.15); color: #e2e8f0; }
+
+.chip { border-radius: 999px; padding: 7px 14px; font-size: 11px; font-weight: 800; background: rgba(51,65,85,.7); border: 1px solid rgba(255,255,255,.14); color: #cbd5e1; }
+.chip.on { background: #059669; border-color: #34d399; color: #fff; }
+
+.custom-input {
+    background-color: rgba(30, 41, 59, 0.9) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+    outline: none;
+    border-radius: 12px;
+    padding: 9px 12px;
+    font-size: 13px;
+    font-weight: 700;
+}
+.custom-input:focus { border-color: #10b981 !important; box-shadow: 0 0 0 3px rgba(16,185,129,.25); }
+
+.tbl { border-collapse: collapse; font-size: 11px; }
+.tbl th { text-align: right; font-size: 9px; letter-spacing: .05em; text-transform: uppercase; color: #94a3b8; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,.14); white-space: nowrap; }
+.tbl th:first-child, .tbl td:first-child { text-align: left; }
+.tbl td { text-align: right; padding: 7px 10px; border-bottom: 1px solid rgba(255,255,255,.06); font-weight: 700; color: #e2e8f0; white-space: nowrap; }
+.tbl td:first-child { white-space: normal; color: #fff; font-weight: 800; }
+.tbl tfoot td { border-top: 1px solid rgba(255,255,255,.25); border-bottom: none; color: #34d399; font-weight: 800; }
+
+.bar-track { background: rgba(51,65,85,.7); border-radius: 999px; height: 8px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #10b981, #34d399); }
+
+#toast { position: fixed; top: 16px; left: 50%; transform: translate(-50%, -120px); z-index: 300; transition: transform .3s cubic-bezier(.175,.885,.32,1.275); max-width: 92vw; pointer-events: none; }
+#toast.show { transform: translate(-50%, 0); }
+
+.animate-pop { animation: popIn .25s cubic-bezier(.175,.885,.32,1.275); }
+@keyframes popIn { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: scale(1); } }
+.skeleton { animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .animate-pop, .skeleton { animation: none; } }
+</style>
+<style id="tw-css">/*TW-START*/*,:after,:before{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/*! tailwindcss v3.4.19 | MIT License | https://tailwindcss.com*/*,:after,:before{box-sizing:border-box;border:0 solid #e5e7eb}:after,:before{--tw-content:""}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;-o-tab-size:4;tab-size:4;font-family:ui-sans-serif,system-ui,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0}fieldset,legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::-moz-placeholder,textarea::-moz-placeholder{opacity:1;color:#9ca3af}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.pointer-events-none{pointer-events:none}.collapse{visibility:collapse}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.inset-0{inset:0}.right-4{right:1rem}.top-4{top:1rem}.z-10{z-index:10}.z-\[100\]{z-index:100}.z-\[150\]{z-index:150}.mx-auto{margin-left:auto;margin-right:auto}.my-4{margin-top:1rem;margin-bottom:1rem}.mb-1{margin-bottom:.25rem}.mb-2{margin-bottom:.5rem}.mb-3{margin-bottom:.75rem}.mb-4{margin-bottom:1rem}.mb-5{margin-bottom:1.25rem}.mb-6{margin-bottom:1.5rem}.mb-8{margin-bottom:2rem}.ml-2{margin-left:.5rem}.mt-0{margin-top:0}.mt-0\.5{margin-top:.125rem}.mt-1{margin-top:.25rem}.mt-2{margin-top:.5rem}.mt-3{margin-top:.75rem}.mt-5{margin-top:1.25rem}.mt-6{margin-top:1.5rem}.block{display:block}.inline-block{display:inline-block}.flex{display:flex}.table{display:table}.grid{display:grid}.hidden{display:none}.h-5{height:1.25rem}.h-64{height:16rem}.h-8{height:2rem}.h-full{height:100%}.max-h-64{max-height:16rem}.max-h-80{max-height:20rem}.max-h-96{max-height:24rem}.max-h-\[420px\]{max-height:420px}.max-h-\[92vh\]{max-height:92vh}.w-11{width:2.75rem}.w-11\/12{width:91.666667%}.w-24{width:6rem}.w-28{width:7rem}.w-5{width:1.25rem}.w-8{width:2rem}.w-full{width:100%}.min-w-0{min-width:0}.min-w-\[180px\]{min-width:180px}.max-w-2xl{max-width:42rem}.max-w-7xl{max-width:80rem}.max-w-\[200px\]{max-width:200px}.max-w-lg{max-width:32rem}.max-w-md{max-width:28rem}.flex-1{flex:1 1 0%}.border-collapse{border-collapse:collapse}.transform{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}@keyframes pulse{50%{opacity:.5}}.animate-pulse{animation:pulse 2s cubic-bezier(.4,0,.6,1) infinite}@keyframes spin{to{transform:rotate(1turn)}}.animate-spin{animation:spin 1s linear infinite}.cursor-pointer{cursor:pointer}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-start{align-items:flex-start}.items-end{align-items:flex-end}.items-center{align-items:center}.justify-end{justify-content:flex-end}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-1{gap:.25rem}.gap-1\.5{gap:.375rem}.gap-2{gap:.5rem}.gap-3{gap:.75rem}.gap-4{gap:1rem}.space-y-1>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.25rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.25rem*var(--tw-space-y-reverse))}.space-y-1\.5>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.375rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.375rem*var(--tw-space-y-reverse))}.space-y-2>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.5rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.5rem*var(--tw-space-y-reverse))}.space-y-2\.5>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.625rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.625rem*var(--tw-space-y-reverse))}.space-y-3>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.75rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.75rem*var(--tw-space-y-reverse))}.space-y-4>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1rem*var(--tw-space-y-reverse))}.space-y-5>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1.25rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.25rem*var(--tw-space-y-reverse))}.space-y-6>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1.5rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.5rem*var(--tw-space-y-reverse))}.overflow-hidden{overflow:hidden}.overflow-x-auto{overflow-x:auto}.overflow-y-auto{overflow-y:auto}.truncate{overflow:hidden;text-overflow:ellipsis}.truncate,.whitespace-nowrap{white-space:nowrap}.break-words{overflow-wrap:break-word}.rounded{border-radius:.25rem}.rounded-2xl{border-radius:1rem}.rounded-\[35px\]{border-radius:35px}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:.5rem}.rounded-md{border-radius:.375rem}.rounded-xl{border-radius:.75rem}.border{border-width:1px}.border-4{border-width:4px}.border-b{border-bottom-width:1px}.border-b-2{border-bottom-width:2px}.border-l-4{border-left-width:4px}.border-t-4{border-top-width:4px}.border-amber-500{--tw-border-opacity:1;border-color:rgb(245 158 11/var(--tw-border-opacity,1))}.border-amber-500\/30{border-color:rgba(245,158,11,.3)}.border-amber-500\/40{border-color:rgba(245,158,11,.4)}.border-emerald-400{--tw-border-opacity:1;border-color:rgb(52 211 153/var(--tw-border-opacity,1))}.border-emerald-400\/30{border-color:rgba(52,211,153,.3)}.border-emerald-500{--tw-border-opacity:1;border-color:rgb(16 185 129/var(--tw-border-opacity,1))}.border-emerald-500\/30{border-color:rgba(16,185,129,.3)}.border-emerald-500\/40{border-color:rgba(16,185,129,.4)}.border-emerald-500\/60{border-color:rgba(16,185,129,.6)}.border-indigo-500{--tw-border-opacity:1;border-color:rgb(99 102 241/var(--tw-border-opacity,1))}.border-indigo-500\/30{border-color:rgba(99,102,241,.3)}.border-indigo-500\/40{border-color:rgba(99,102,241,.4)}.border-orange-500{--tw-border-opacity:1;border-color:rgb(249 115 22/var(--tw-border-opacity,1))}.border-orange-500\/40{border-color:rgba(249,115,22,.4)}.border-red-500{--tw-border-opacity:1;border-color:rgb(239 68 68/var(--tw-border-opacity,1))}.border-red-500\/30{border-color:rgba(239,68,68,.3)}.border-red-500\/40{border-color:rgba(239,68,68,.4)}.border-slate-600{--tw-border-opacity:1;border-color:rgb(71 85 105/var(--tw-border-opacity,1))}.border-slate-700{--tw-border-opacity:1;border-color:rgb(51 65 85/var(--tw-border-opacity,1))}.border-white{--tw-border-opacity:1;border-color:rgb(255 255 255/var(--tw-border-opacity,1))}.border-white\/10{border-color:hsla(0,0%,100%,.1)}.border-white\/30{border-color:hsla(0,0%,100%,.3)}.border-t-transparent{border-top-color:transparent}.bg-amber-500{--tw-bg-opacity:1;background-color:rgb(245 158 11/var(--tw-bg-opacity,1))}.bg-amber-500\/20{background-color:rgba(245,158,11,.2)}.bg-amber-950{--tw-bg-opacity:1;background-color:rgb(69 26 3/var(--tw-bg-opacity,1))}.bg-amber-950\/50{background-color:rgba(69,26,3,.5)}.bg-amber-950\/70{background-color:rgba(69,26,3,.7)}.bg-amber-950\/80{background-color:rgba(69,26,3,.8)}.bg-black{--tw-bg-opacity:1;background-color:rgb(0 0 0/var(--tw-bg-opacity,1))}.bg-black\/80{background-color:rgba(0,0,0,.8)}.bg-emerald-500{--tw-bg-opacity:1;background-color:rgb(16 185 129/var(--tw-bg-opacity,1))}.bg-emerald-500\/15{background-color:rgba(16,185,129,.15)}.bg-emerald-500\/20{background-color:rgba(16,185,129,.2)}.bg-emerald-950{--tw-bg-opacity:1;background-color:rgb(2 44 34/var(--tw-bg-opacity,1))}.bg-emerald-950\/50{background-color:rgba(2,44,34,.5)}.bg-emerald-950\/80{background-color:rgba(2,44,34,.8)}.bg-indigo-500{--tw-bg-opacity:1;background-color:rgb(99 102 241/var(--tw-bg-opacity,1))}.bg-indigo-500\/20{background-color:rgba(99,102,241,.2)}.bg-indigo-600{--tw-bg-opacity:1;background-color:rgb(79 70 229/var(--tw-bg-opacity,1))}.bg-indigo-950{--tw-bg-opacity:1;background-color:rgb(30 27 75/var(--tw-bg-opacity,1))}.bg-indigo-950\/60{background-color:rgba(30,27,75,.6)}.bg-orange-500{--tw-bg-opacity:1;background-color:rgb(249 115 22/var(--tw-bg-opacity,1))}.bg-orange-500\/20{background-color:rgba(249,115,22,.2)}.bg-red-500{--tw-bg-opacity:1;background-color:rgb(239 68 68/var(--tw-bg-opacity,1))}.bg-red-500\/20{background-color:rgba(239,68,68,.2)}.bg-red-950{--tw-bg-opacity:1;background-color:rgb(69 10 10/var(--tw-bg-opacity,1))}.bg-red-950\/50{background-color:rgba(69,10,10,.5)}.bg-red-950\/60{background-color:rgba(69,10,10,.6)}.bg-red-950\/70{background-color:rgba(69,10,10,.7)}.bg-slate-700{--tw-bg-opacity:1;background-color:rgb(51 65 85/var(--tw-bg-opacity,1))}.bg-slate-800{--tw-bg-opacity:1;background-color:rgb(30 41 59/var(--tw-bg-opacity,1))}.bg-slate-900{--tw-bg-opacity:1;background-color:rgb(15 23 42/var(--tw-bg-opacity,1))}.bg-slate-900\/60{background-color:rgba(15,23,42,.6)}.bg-slate-900\/80{background-color:rgba(15,23,42,.8)}.bg-slate-900\/90{background-color:rgba(15,23,42,.9)}.bg-transparent{background-color:transparent}.bg-gradient-to-br{background-image:linear-gradient(to bottom right,var(--tw-gradient-stops))}.from-emerald-600{--tw-gradient-from:#059669 var(--tw-gradient-from-position);--tw-gradient-to:rgba(5,150,105,0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)}.to-teal-800{--tw-gradient-to:#115e59 var(--tw-gradient-to-position)}.p-10{padding:2.5rem}.p-2{padding:.5rem}.p-2\.5{padding:.625rem}.p-3{padding:.75rem}.p-3\.5{padding:.875rem}.p-4{padding:1rem}.p-5{padding:1.25rem}.p-6{padding:1.5rem}.p-8{padding:2rem}.px-1{padding-left:.25rem;padding-right:.25rem}.px-1\.5{padding-left:.375rem;padding-right:.375rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-3{padding-left:.75rem;padding-right:.75rem}.px-4{padding-left:1rem;padding-right:1rem}.py-0{padding-top:0;padding-bottom:0}.py-0\.5{padding-top:.125rem;padding-bottom:.125rem}.py-1{padding-top:.25rem;padding-bottom:.25rem}.py-10{padding-top:2.5rem;padding-bottom:2.5rem}.py-12{padding-top:3rem;padding-bottom:3rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.py-3{padding-top:.75rem;padding-bottom:.75rem}.py-4{padding-top:1rem;padding-bottom:1rem}.py-5{padding-top:1.25rem;padding-bottom:1.25rem}.py-8{padding-top:2rem;padding-bottom:2rem}.pb-2{padding-bottom:.5rem}.pb-20{padding-bottom:5rem}.pb-28{padding-bottom:7rem}.pr-1{padding-right:.25rem}.pr-2{padding-right:.5rem}.pt-2{padding-top:.5rem}.text-center{text-align:center}.text-right{text-align:right}.text-2xl{font-size:1.5rem;line-height:2rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-5xl{font-size:3rem;line-height:1}.text-7xl{font-size:4.5rem;line-height:1}.text-\[10px\]{font-size:10px}.text-\[11px\]{font-size:11px}.text-\[9px\]{font-size:9px}.text-base{font-size:1rem;line-height:1.5rem}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-sm{font-size:.875rem;line-height:1.25rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-xs{font-size:.75rem;line-height:1rem}.font-black{font-weight:900}.font-bold{font-weight:700}.font-extrabold{font-weight:800}.font-semibold{font-weight:600}.uppercase{text-transform:uppercase}.italic{font-style:italic}.leading-relaxed{line-height:1.625}.tracking-tight{letter-spacing:-.025em}.tracking-wide{letter-spacing:.025em}.tracking-wider{letter-spacing:.05em}.tracking-widest{letter-spacing:.1em}.\!text-emerald-400{--tw-text-opacity:1!important;color:rgb(52 211 153/var(--tw-text-opacity,1))!important}.\!text-slate-500{--tw-text-opacity:1!important;color:rgb(100 116 139/var(--tw-text-opacity,1))!important}.text-amber-300{--tw-text-opacity:1;color:rgb(252 211 77/var(--tw-text-opacity,1))}.text-amber-400{--tw-text-opacity:1;color:rgb(251 191 36/var(--tw-text-opacity,1))}.text-emerald-200{--tw-text-opacity:1;color:rgb(167 243 208/var(--tw-text-opacity,1))}.text-emerald-300{--tw-text-opacity:1;color:rgb(110 231 183/var(--tw-text-opacity,1))}.text-emerald-400{--tw-text-opacity:1;color:rgb(52 211 153/var(--tw-text-opacity,1))}.text-indigo-200{--tw-text-opacity:1;color:rgb(199 210 254/var(--tw-text-opacity,1))}.text-indigo-300{--tw-text-opacity:1;color:rgb(165 180 252/var(--tw-text-opacity,1))}.text-indigo-400{--tw-text-opacity:1;color:rgb(129 140 248/var(--tw-text-opacity,1))}.text-orange-300{--tw-text-opacity:1;color:rgb(253 186 116/var(--tw-text-opacity,1))}.text-orange-400{--tw-text-opacity:1;color:rgb(251 146 60/var(--tw-text-opacity,1))}.text-orange-500{--tw-text-opacity:1;color:rgb(249 115 22/var(--tw-text-opacity,1))}.text-red-300{--tw-text-opacity:1;color:rgb(252 165 165/var(--tw-text-opacity,1))}.text-red-400{--tw-text-opacity:1;color:rgb(248 113 113/var(--tw-text-opacity,1))}.text-sky-300{--tw-text-opacity:1;color:rgb(125 211 252/var(--tw-text-opacity,1))}.text-slate-100{--tw-text-opacity:1;color:rgb(241 245 249/var(--tw-text-opacity,1))}.text-slate-200{--tw-text-opacity:1;color:rgb(226 232 240/var(--tw-text-opacity,1))}.text-slate-300{--tw-text-opacity:1;color:rgb(203 213 225/var(--tw-text-opacity,1))}.text-slate-400{--tw-text-opacity:1;color:rgb(148 163 184/var(--tw-text-opacity,1))}.text-slate-500{--tw-text-opacity:1;color:rgb(100 116 139/var(--tw-text-opacity,1))}.text-slate-950{--tw-text-opacity:1;color:rgb(2 6 23/var(--tw-text-opacity,1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255/var(--tw-text-opacity,1))}.accent-emerald-500{accent-color:#10b981}.shadow{--tw-shadow:0 1px 3px 0 rgba(0,0,0,.1),0 1px 2px -1px rgba(0,0,0,.1);--tw-shadow-colored:0 1px 3px 0 var(--tw-shadow-color),0 1px 2px -1px var(--tw-shadow-color)}.shadow,.shadow-2xl{box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-2xl{--tw-shadow:0 25px 50px -12px rgba(0,0,0,.25);--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color)}.shadow-lg{--tw-shadow:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -4px rgba(0,0,0,.1);--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color),0 4px 6px -4px var(--tw-shadow-color)}.shadow-lg,.shadow-xl{box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-xl{--tw-shadow:0 20px 25px -5px rgba(0,0,0,.1),0 8px 10px -6px rgba(0,0,0,.1);--tw-shadow-colored:0 20px 25px -5px var(--tw-shadow-color),0 8px 10px -6px var(--tw-shadow-color)}.shadow-emerald-500{--tw-shadow-color:#10b981;--tw-shadow:var(--tw-shadow-colored)}.outline-none{outline:2px solid transparent;outline-offset:2px}.outline{outline-style:solid}.blur{--tw-blur:blur(8px)}.blur,.grayscale{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.grayscale{--tw-grayscale:grayscale(100%)}.filter{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.backdrop-blur-md{--tw-backdrop-blur:blur(12px)}.backdrop-blur-md,.backdrop-filter{-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.transition{transition-property:color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,-webkit-backdrop-filter;transition-property:color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter;transition-property:color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter,-webkit-backdrop-filter;transition-timing-function:cubic-bezier(.4,0,.2,1);transition-duration:.15s}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(.4,0,.2,1);transition-duration:.15s}.ease-in-out{transition-timing-function:cubic-bezier(.4,0,.2,1)}.hover\:bg-emerald-400:hover{--tw-bg-opacity:1;background-color:rgb(52 211 153/var(--tw-bg-opacity,1))}.hover\:bg-slate-700:hover{--tw-bg-opacity:1;background-color:rgb(51 65 85/var(--tw-bg-opacity,1))}.hover\:bg-slate-800:hover{--tw-bg-opacity:1;background-color:rgb(30 41 59/var(--tw-bg-opacity,1))}.hover\:text-white:hover{--tw-text-opacity:1;color:rgb(255 255 255/var(--tw-text-opacity,1))}.hover\:shadow-emerald-500\/40:hover{--tw-shadow-color:rgba(16,185,129,.4);--tw-shadow:var(--tw-shadow-colored)}.focus\:border-emerald-300:focus{--tw-border-opacity:1;border-color:rgb(110 231 183/var(--tw-border-opacity,1))}.focus\:border-emerald-400:focus{--tw-border-opacity:1;border-color:rgb(52 211 153/var(--tw-border-opacity,1))}.focus\:outline-none:focus{outline:2px solid transparent;outline-offset:2px}.active\:scale-95:active{--tw-scale-x:.95;--tw-scale-y:.95;transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}@media (min-width:768px){.md\:col-span-2{grid-column:span 2/span 2}.md\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.md\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}}@media (min-width:1024px){.lg\:col-span-2{grid-column:span 2/span 2}.lg\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.lg\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.lg\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.lg\:flex-row{flex-direction:row}.lg\:items-center{align-items:center}.lg\:text-3xl{font-size:1.875rem;line-height:2.25rem}}@media (min-width:1280px){.xl\:col-span-3{grid-column:span 3/span 3}.xl\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.xl\:grid-cols-7{grid-template-columns:repeat(7,minmax(0,1fr))}}/*TW-END*/</style>
+</head>
+
+<body class="p-4 pb-20">
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div id="toast" class="panel px-4 py-3 text-xs font-bold text-white flex items-center gap-2"><span id="toastIcon">ℹ️</span><span id="toastMsg"></span></div>
+
+<div id="verBanner" class="hidden max-w-7xl mx-auto mb-4 relative z-10 p-3 rounded-2xl text-[11px] font-extrabold text-center bg-amber-950/70 border border-amber-500/40 text-amber-300">
+    Backend (Code.gs) belum versi 13. Rapor operator loader dan helper baru tersedia setelah Code.gs terbaru di-deploy (Deploy, Manage deployments, New version).
+</div>
+
+<div id="netBanner" class="hidden max-w-7xl mx-auto mb-4 relative z-10 p-3 rounded-2xl text-[11px] font-extrabold uppercase text-center bg-red-950/70 border border-red-500/40 text-red-300">
+    ⚠ Koneksi terputus - menampilkan data terakhir
+</div>
+
+<header class="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 relative z-10">
+    <div>
+        <h1 class="text-2xl font-extrabold text-white uppercase tracking-tight">Live<span class="text-emerald-400 italic">Monitor</span></h1>
+        <p id="modeLabel" class="text-[11px] font-bold text-slate-400 mt-1">Memuat...</p>
+    </div>
+    <div class="panel p-3 flex flex-wrap items-center gap-3 justify-end">
+        <p id="lastUpdated" class="text-[10px] font-extrabold text-slate-400 uppercase">Last Updated: -</p>
+        <button type="button" id="btnAi" class="btn btn-indigo">✨ AI Intelligence</button>
+        <button type="button" id="btnRefresh" class="btn btn-green">Refresh</button>
+    </div>
+</header>
+
+<main class="max-w-7xl mx-auto space-y-6 relative z-10">
+
+    <!-- CARI PER TANGGAL -->
+    <section class="panel p-4 space-y-3" aria-label="Cari distribusi per tanggal">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="label">Cari distribusi per tanggal</h2>
+            <button type="button" id="btnLive" class="chip on">🔴 Live hari ini</button>
+        </div>
+        <div class="flex flex-wrap items-end gap-3">
+            <label class="block">
+                <span class="label block mb-1">Dari</span>
+                <input type="date" id="dFrom" class="custom-input">
+            </label>
+            <label class="block">
+                <span class="label block mb-1">Sampai</span>
+                <input type="date" id="dTo" class="custom-input">
+            </label>
+            <button type="button" id="btnSearch" class="btn btn-green">Cari</button>
+        </div>
+        <div class="flex flex-wrap gap-2" id="quickChips">
+            <button type="button" class="chip" data-range="today">Hari ini</button>
+            <button type="button" class="chip" data-range="yesterday">Kemarin</button>
+            <button type="button" class="chip" data-range="7d">7 hari terakhir</button>
+            <button type="button" class="chip" data-range="month">Bulan ini</button>
+        </div>
+        <p class="text-[10px] text-slate-500 font-semibold">Satu hari operasional = pukul <span id="dayStartLbl">04.00</span> s/d <span id="dayEndLbl">03.59</span> keesokan harinya. Rentang maksimal 31 hari.</p>
+    </section>
+
+    <!-- HASIL: JUDUL + EKSPOR -->
+    <section class="flex flex-wrap items-center justify-between gap-3 px-1">
+        <div>
+            <h2 id="resultTitle" class="text-sm font-extrabold text-white"></h2>
+            <p id="resultSub" class="text-[11px] font-semibold text-slate-400"></p>
+        </div>
+        <div class="flex gap-2">
+            <button type="button" id="btnPdf" class="btn btn-red" disabled>📄 Unduh PDF</button>
+            <button type="button" id="btnRapor" class="btn btn-indigo" disabled>🧾 Rapor Operator</button>
+            <button type="button" id="btnCsv" class="btn btn-ghost" disabled>⬇ CSV</button>
+        </div>
+    </section>
+
+    <!-- RINGKASAN -->
+    <section id="summaryCards" class="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3"></section>
+
+    <!-- SEDANG DI MIXER (LIVE) -->
+    <section id="activeSection">
+        <h2 class="label mb-3 ml-2 italic">Sedang di Mixer</h2>
+        <div id="activeCon" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+    </section>
+
+    <!-- REKAP -->
+    <section id="rekapSection" class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="panel p-4 space-y-5">
+            <div>
+                <h2 class="label mb-3">Rekap per shift</h2>
+                <div id="rekapShift" class="space-y-3"></div>
+            </div>
+        </div>
+        <div class="panel p-4 lg:col-span-2 space-y-4">
+            <div id="rekapDayBox" class="hidden">
+                <h2 class="label mb-2">Rekap harian (kg)</h2>
+                <div id="rekapDay" class="overflow-x-auto"></div>
+            </div>
+            <div>
+                <h2 class="label mb-2">Rekap per pen (kg)</h2>
+                <div id="rekapPen" class="overflow-x-auto max-h-[420px] overflow-y-auto"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- RAPOR OPERATOR -->
+    <section id="raporSection" class="panel p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <h2 class="label">Rapor</h2>
+            <div class="flex flex-wrap gap-2" id="raporTabs">
+                <button type="button" class="chip on" data-rtab="mixer">Operator Mixer</button>
+                <button type="button" class="chip" data-rtab="loader">Operator Loader</button>
+                <button type="button" class="chip" data-rtab="helper">Helper</button>
+                <button type="button" class="chip" data-rtab="unit">Unit Mixer</button>
+            </div>
+        </div>
+        <p id="raporDesc" class="text-[10px] font-semibold text-slate-500 mb-4"></p>
+        <div id="raporCards" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3"></div>
+    </section>
+
+    <!-- LOG PER SHIFT -->
+    <section class="space-y-3">
+        <div class="flex flex-wrap items-center gap-2 px-1">
+            <button type="button" class="chip on" data-shift="all">Semua</button>
+            <button type="button" class="chip" data-shift="Pagi">Pagi</button>
+            <button type="button" class="chip" data-shift="Siang">Siang</button>
+            <button type="button" class="chip" data-shift="Malam">Malam</button>
+            <input type="search" id="q" placeholder="Cari pen / operator..." class="custom-input flex-1 min-w-[180px]">
+        </div>
+        <p class="text-[10px] font-semibold text-slate-500 px-1">Warna durasi mixing: <span class="text-emerald-400">hijau</span> = <span class="sopMinMax"></span> (sesuai SOP), <span class="text-amber-400">oranye</span> = kurang dari <span class="sopMin"></span>, <span class="text-red-400">merah</span> = lebih dari <span class="sopMax"></span>.</p>
+        <div id="logCols" class="grid grid-cols-1 lg:grid-cols-3 gap-4"></div>
+        <div id="emptyBox" class="hidden panel p-10 text-center text-sm font-bold text-slate-400"></div>
+    </section>
+</main>
+
+<!-- GEMINI AI HUB -->
+<div id="aiHubModal" class="fixed inset-0 bg-black/80 z-[100] hidden items-center justify-center p-4">
+    <div class="panel max-w-2xl w-full p-6 border border-indigo-500/40 animate-pop max-h-[92vh] overflow-y-auto">
+        <button type="button" id="aiClose1" class="absolute top-4 right-4 text-slate-400 hover:text-white font-bold text-lg" aria-label="Tutup">✕</button>
+        <div class="flex items-center gap-3 mb-5">
+            <div class="p-3 bg-indigo-500/20 text-indigo-400 rounded-2xl text-xl">✨</div>
+            <div>
+                <h3 class="text-xl font-extrabold text-white">Gemini AI Feed Supervisor</h3>
+                <p class="text-xs font-bold text-indigo-300 uppercase">Analisis Laporan Operasional &amp; Briefing Audio</p>
+            </div>
+        </div>
+
+        <div class="flex gap-2 mb-4 border-b border-white/10 pb-2">
+            <button type="button" id="tabReportBtn" class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white">📊 Laporan AI</button>
+            <button type="button" id="tabChatBtn" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300">💬 Tanya AI Nutrisi</button>
+        </div>
+
+        <div id="tabReport" class="space-y-4">
+            <div class="flex flex-wrap justify-between items-center gap-2">
+                <span id="aiScope" class="text-xs text-slate-400 font-semibold">Evaluasi data yang sedang ditampilkan</span>
+                <div class="flex gap-2">
+                    <button type="button" id="btnGenReport" class="btn btn-indigo">Generate Laporan</button>
+                    <button type="button" id="ttsBtn" disabled class="btn btn-indigo">🔊 Dengarkan</button>
+                </div>
+            </div>
+            <div id="aiReportBox" class="bg-slate-900/90 border border-white/10 p-5 rounded-2xl text-xs text-slate-200 leading-relaxed max-h-96 overflow-y-auto">
+                <p class="text-slate-400 italic text-center py-8">Klik "Generate Laporan" agar Gemini AI menganalisis data yang sedang tampil.</p>
+            </div>
+        </div>
+
+        <div id="tabChat" class="hidden space-y-4">
+            <div id="chatHistory" class="bg-slate-900/90 border border-white/10 p-4 rounded-2xl text-xs text-slate-200 h-64 overflow-y-auto space-y-3">
+                <div class="bg-indigo-950/60 border border-indigo-500/30 p-3 rounded-xl">
+                    <p class="font-bold text-indigo-300 mb-1">🤖 Gemini AI Supervisor</p>
+                    <p>Halo Supervisor! Ada pertanyaan terkait nutrisi pakan TMR, kelembapan silase, atau performa operator?</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <input type="text" id="aiQueryInput" maxlength="500" placeholder="Tanyakan ke AI (misal: rasio pakan ideal saat hujan?)..." class="flex-1 custom-input">
+                <button type="button" id="btnSendAi" class="btn btn-indigo">Kirim</button>
+            </div>
+        </div>
+
+        <button type="button" id="aiClose2" class="w-full mt-6 btn btn-ghost py-3">Tutup AI Hub</button>
+    </div>
+</div>
+
+<script>
+/* ============================================================
+ * KONFIGURASI
+ * ============================================================ */
+const BASE_URL = "https://script.google.com/macros/s/AKfycbwdmVQ2hm--S6GPbpyTVEnq3y9FMrlPQO5XE9ebu0_YPEpx-i-_qZgyCH_urmQ4wi7-ow/exec";
+const LIVE_URL = BASE_URL + "?app=monitor";
+const REPORT_URL = BASE_URL + "?app=report";
+
+const LIVE_REFRESH_MS = 30000;   // sama dengan cache server (30 dtk): banyak layar tidak membebani spreadsheet
+// SOP mixing: 4 s/d 7 menit. Lebih dari 7 menit = merah, kurang dari 4 menit = oranye.
+const SOP_MIN_SEC = 4 * 60;
+const SOP_MAX_SEC = 7 * 60;
+// Predikat rapor operator berdasarkan % batch yang sesuai SOP (silakan sesuaikan batasnya)
+const RAPOR_GRADES = [
+    { min: 90, label: "Sesuai SOP",      tone: "ok" },
+    { min: 70, label: "Perlu Perhatian", tone: "warn" },
+    { min: 0,  label: "Di Bawah SOP",    tone: "bad" }
+];
+// Rapor operator loader: akurasi penimbangan Tebon Jagung & Konsentrat (batas sama dengan validasi di aplikasi Loader)
+const WEIGH_OK_PCT = 5;      // selisih aktual vs target <= 5%  = akurat
+const WEIGH_WARN_PCT = 10;   // 5% - 10% = perlu cek, lebih dari 10% = menyimpang
+const WEIGH_ITEMS = [{ key: "jagung", label: "Tebon Jagung" }, { key: "konsentrat", label: "Konsentrat" }];
+const NEED_SERVER = 13.1;    // versi backend (Code.gs) minimal untuk rapor loader, helper (molases) & unit mixer
+// Rapor helper: akurasi penuangan molases (aktual vs target di MasterTonase, disimpan saat batch disimpan)
+const MOL_OK_PCT = 5;        // selisih sampai 5% = akurat
+const MOL_WARN_PCT = 10;     // 5% - 10% = perlu cek, lebih dari 10% = menyimpang
+// Rapor unit mixer. Isi kapasitas acuan (kg per batch) jika ingin melihat % utilisasi; 0 = tidak dihitung.
+const MIXER_UNITS = ["Trioliet", "Supreme"];
+const MIXER_CAPACITY_KG = { Trioliet: 0, Supreme: 0 };
+const TONE = {
+    ok:   { text: "text-emerald-400", badge: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40", rgb: [6, 95, 70] },
+    warn: { text: "text-amber-400",   badge: "bg-amber-500/20 text-amber-300 border-amber-500/40",       rgb: [180, 83, 9] },
+    bad:  { text: "text-red-400",     badge: "bg-red-500/20 text-red-300 border-red-500/40",             rgb: [185, 28, 28] }
+};
+const MAX_RANGE_DAYS = 31;
+const SHIFTS = ["Pagi", "Siang", "Malam"];
+const SHIFT_LABEL = { Pagi: "Shift 1 (Pagi)", Siang: "Shift 2 (Siang)", Malam: "Shift 3 (Malam)" };
+const MAX_CARDS = 60;            // kartu per kolom sebelum "Tampilkan semua"
+
+// Identitas di header PDF. Silakan sesuaikan.
+const REPORT_CONFIG = {
+    company: "PT Bumi Rojo Koyo",
+    department: "Departemen Feeding",
+    title: "LAPORAN DISTRIBUSI PAKAN (TMR)",
+    preparedRole: "Supervisor Feeding",
+    preparedName: "Andre",
+    approvedRole: "Manager",
+    approvedName: ""
+};
+
+const PDF_LIBS = [
+    ["https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
+     "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"],
+    ["https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js",
+     "https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"]
+];
+
+/* ============================================================
+ * STATE & HELPER
+ * ============================================================ */
+const S = {
+    mode: "live",            // live | report
+    opDay: null,             // hari operasional menurut server
+    dayStartHour: 4,
+    from: null, to: null,
+    logs: [], active: [], batches: [], serverVersion: "", raporTab: "mixer",
+    shiftFilter: "all", query: "",
+    showAll: {},
+    lastUpdated: null,
+    loading: false,
+    reportRequest: 0
+};
+const REPORT_CACHE = new Map();
+let GENERATED_REPORT_TEXT = "";
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const nf = n => Math.round(Number(n) || 0).toLocaleString("id-ID");
+const pad2 = n => String(n).padStart(2, "0");
+
+function keyFromLocal(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
+function opDayNow() { return S.opDay || keyFromLocal(new Date(Date.now() - S.dayStartHour * 3600 * 1000)); }
+function noon(key) { return new Date(key + "T12:00:00"); }
+function addDays(key, n) { const d = noon(key); d.setDate(d.getDate() + n); return keyFromLocal(d); }
+function diffDays(a, b) { return Math.round((noon(b) - noon(a)) / 86400000); }
+function fmtLong(key) { return noon(key).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" }); }
+function fmtMid(key) { return noon(key).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }); }
+function fmtDM(key) { return key.slice(8, 10) + "/" + key.slice(5, 7); }
+function isKey(s) { return /^\d{4}-\d{2}-\d{2}$/.test(s || "") && !isNaN(noon(s)); }
+function fmtDur(sec) { return pad2(Math.floor(sec / 60)) + ":" + pad2(Math.round(sec % 60)); }
+function sopStatus(sec) {          // null = tidak ada data, fast = < 4 mnt, ok = 4-7 mnt, slow = > 7 mnt
+    if (!(sec > 0)) return null;
+    return sec < SOP_MIN_SEC ? "fast" : sec > SOP_MAX_SEC ? "slow" : "ok";
+}
+function sopText() { return `${fmtDur(SOP_MIN_SEC)} - ${fmtDur(SOP_MAX_SEC)}`; }
+function gradeOf(pct) { return RAPOR_GRADES.find(g => pct >= g.min) || RAPOR_GRADES[RAPOR_GRADES.length - 1]; }
+function durToSec(s) {
+    const m = /^(\d+):(\d{2})$/.exec(String(s || "").trim());
+    if (!m) return 0;
+    return Number(m[1]) * 60 + Number(m[2]);   // "00:00" = tidak terbaca -> 0 (diabaikan)
+}
+
+function toast(msg, type) {
+    $("toastIcon").textContent = type === "error" ? "❌" : (type === "success" ? "✅" : "ℹ️");
+    $("toastMsg").textContent = msg;
+    const t = $("toast");
+    t.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => t.classList.remove("show"), 3800);
+}
+
+function setNet(ok) { $("netBanner").classList.toggle("hidden", ok); }
+
+function normLog(l) {
+    const shift = String(l.shift || "").trim();
+    return {
+        waktu: l.waktu, day: l.day || "", cal: l.cal || l.day || "", jam: l.jam || "",
+        operator: String(l.operator || "").trim(),
+        shift: /pagi/i.test(shift) ? "Pagi" : /siang/i.test(shift) ? "Siang" : /malam/i.test(shift) ? "Malam" : (shift || "Lainnya"),
+        pen: String(l.pen || "").trim(),
+        tonase: Number(l.tonase) || 0,
+        durasi: /^\d+:\d{2}$/.test(String(l.durasi || "").trim()) ? String(l.durasi).trim() : "",   // selain mm:ss dianggap tidak ada
+        helper: String(l.helper || "").trim(),
+        clientId: String(l.clientId || "")
+    };
+}
+
+function normShiftName(sh) {
+    sh = String(sh || "").trim();
+    return /pagi/i.test(sh) ? "Pagi" : /siang/i.test(sh) ? "Siang" : /malam/i.test(sh) ? "Malam" : (sh || "Lainnya");
+}
+
+/** Satu batch loader (satu sesi mixing): aktual, target (snapshot), molases, helper. */
+function normBatch(b) {
+    const n = v => Number(v) || 0;
+    const a = b.akt || {}, t = b.tgt && typeof b.tgt === "object" ? b.tgt : null, m = b.mol || {};
+    return {
+        clientId: String(b.clientId || ""), waktu: b.waktu, day: b.day || "", cal: b.cal || b.day || "", jam: b.jam || "",
+        shift: normShiftName(b.shift),
+        loader: String(b.loader || "").trim() || "-",
+        pens: String(b.pens || ""),
+        akt: { sisa: n(a.sisa), odot: n(a.odot), jagung: n(a.jagung), silase: n(a.silase), konsentrat: n(a.konsentrat) },
+        tgt: t ? { sisa: n(t.sisa), odot: n(t.odot), jagung: n(t.jagung), silase: n(t.silase), konsentrat: n(t.konsentrat), pct: n(t.pct), molases: n(t.molases) } : null,
+        mol: { sebelum: n(m.sebelum), akhir: n(m.akhir), total: n(m.total) },
+        helperMol: String(b.helperMol || "").trim(),
+        mixerUnit: String(b.mixerUnit || "").trim()
+    };
+}
+
+function checkServerVersion(d) {
+    S.serverVersion = String((d && d.serverVersion) || "");
+    const major = parseFloat(S.serverVersion);
+    $("verBanner").classList.toggle("hidden", Number.isFinite(major) && major >= NEED_SERVER);
+}
+
+function applyServerMeta(d) {
+    const h = Number(d && d.dayStartHour);
+    if (d && d.dayStartHour !== undefined && Number.isFinite(h)) S.dayStartHour = h;
+    if (d && d.opDay) S.opDay = d.opDay;
+    $("dayStartLbl").textContent = pad2(S.dayStartHour) + ".00";
+    $("dayEndLbl").textContent = pad2((S.dayStartHour + 23) % 24) + ".59";
+}
+
+/* ============================================================
+ * STATISTIK (dipakai layar & PDF)
+ * ============================================================ */
+function computeStats(logs) {
+    const st = {
+        rows: logs.length, kg: 0, batches: new Set(), shift: {}, pens: {}, ops: {}, days: {}, dur: {}
+    };
+    SHIFTS.forEach(s => st.shift[s] = { n: 0, kg: 0 });
+    st.shift.Lainnya = { n: 0, kg: 0 };
+
+    logs.forEach(l => {
+        const kg = l.tonase;
+        st.kg += kg;
+        const sk = SHIFTS.includes(l.shift) ? l.shift : "Lainnya";
+        st.shift[sk].n++; st.shift[sk].kg += kg;
+
+        const p = st.pens[l.pen] || (st.pens[l.pen] = { Pagi: 0, Siang: 0, Malam: 0, Lainnya: 0, total: 0, n: 0 });
+        p[sk] += kg; p.total += kg; p.n++;
+
+        const opName = l.operator || "-";
+        const o = st.ops[opName] || (st.ops[opName] = { n: 0, kg: 0, batches: {} });
+        o.n++; o.kg += kg;
+
+        const dk = l.day || "-";
+        const d = st.days[dk] || (st.days[dk] = { Pagi: 0, Siang: 0, Malam: 0, Lainnya: 0, total: 0, n: 0 });
+        d[sk] += kg; d.total += kg; d.n++;
+
+        const bk = l.clientId || `${dk}|${l.shift}|${l.jam}`;
+        st.batches.add(bk);
+        const sec = durToSec(l.durasi);
+        if (sec > 0) st.dur[bk] = sec;
+
+        // per operator: satu batch dinilai satu kali (batch = satu sesi mixing)
+        const ob = o.batches[bk] || (o.batches[bk] = { sec: 0, day: dk, cal: l.cal, jam: l.jam, shift: l.shift, waktu: l.waktu, pens: [], kg: 0 });
+        ob.pens.push(l.pen); ob.kg += kg;
+        if (sec > 0) ob.sec = sec;
+        if (l.waktu && (!ob.waktu || l.waktu < ob.waktu)) { ob.waktu = l.waktu; ob.jam = l.jam; ob.cal = l.cal; }
+    });
+
+    const secs = Object.values(st.dur);
+    st.avgSec = secs.length ? secs.reduce((a, b) => a + b, 0) / secs.length : 0;
+    st.durBatches = secs.length;
+    st.sopOk = secs.filter(x => sopStatus(x) === "ok").length;
+    st.sopFast = secs.filter(x => sopStatus(x) === "fast").length;
+    st.sopSlow = secs.filter(x => sopStatus(x) === "slow").length;
+    Object.values(st.ops).forEach(o => { o.rapor = buildRapor(o.batches); });
+    return st;
+}
+
+/** Rapor satu operator dari batch-batch yang ia tangani. Batch tanpa durasi tidak dinilai. */
+function buildRapor(batches) {
+    const list = Object.values(batches).filter(b => b.sec > 0).sort((a, b) => (a.waktu < b.waktu ? -1 : 1));
+    const r = { total: list.length, ok: 0, fast: 0, slow: 0, avgSec: 0, minSec: 0, maxSec: 0, pct: null, grade: null, viol: [], days: {} };
+    if (!list.length) return r;
+    let sum = 0;
+    list.forEach(b => {
+        const stt = sopStatus(b.sec);
+        r[stt]++; sum += b.sec;
+        const d = r.days[b.day] || (r.days[b.day] = { total: 0, ok: 0 });
+        d.total++; if (stt === "ok") d.ok++;
+        if (stt !== "ok") r.viol.push(Object.assign({ status: stt }, b));
+    });
+    const secs = list.map(b => b.sec);
+    r.avgSec = sum / list.length; r.minSec = Math.min(...secs); r.maxSec = Math.max(...secs);
+    r.pct = r.ok / r.total * 100;
+    r.grade = gradeOf(r.pct);
+    return r;
+}
+
+/* ---------- rapor operator loader: akurasi penimbangan ---------- */
+function weighStatus(absPct) { return absPct <= WEIGH_OK_PCT ? "ok" : absPct <= WEIGH_WARN_PCT ? "warn" : "bad"; }
+
+/** Nilai satu bahan pada satu batch. null = tidak dinilai (tidak ada target / target 0). */
+function evalWeigh(b, key) {
+    if (!b.tgt) return null;
+    const t = b.tgt[key], a = b.akt[key];
+    if (!(t > 0)) return null;
+    if (!(a > 0)) return { key, status: "empty", t, a: 0, dev: 0, pct: 0 };   // target ada tapi aktual tidak diisi
+    const dev = a - t, pct = dev / t * 100;
+    return { key, status: weighStatus(Math.abs(pct)), t, a, dev, pct };
+}
+
+function buildLoaderRapor(batches) {
+    const r = { batches: batches.length, noTarget: 0, total: 0, akurat: 0, pct: null, grade: null, items: {}, viol: [], days: {} };
+    WEIGH_ITEMS.forEach(it => { r.items[it.key] = { n: 0, ok: 0, warn: 0, bad: 0, empty: 0, sumAbs: 0, sumSigned: 0, sumKg: 0, maxAbs: 0 }; });
+    batches.slice().sort((a, b) => (a.waktu < b.waktu ? -1 : 1)).forEach(b => {
+        if (!b.tgt) { r.noTarget++; return; }                       // data sebelum fitur target: tidak dinilai
+        const evals = WEIGH_ITEMS.map(it => evalWeigh(b, it.key)).filter(Boolean);
+        if (!evals.length) return;                                  // batch tanpa jagung/konsentrat: tidak dinilai
+        r.total++;
+        let allOk = true;
+        evals.forEach(e => {
+            const it = r.items[e.key];
+            if (e.status === "empty") { it.empty++; allOk = false; return; }
+            it.n++; it[e.status]++;
+            it.sumAbs += Math.abs(e.pct); it.sumSigned += e.pct; it.sumKg += e.dev;
+            it.maxAbs = Math.max(it.maxAbs, Math.abs(e.pct));
+            if (e.status !== "ok") allOk = false;
+        });
+        if (allOk) r.akurat++;
+        const d = r.days[b.day] || (r.days[b.day] = { total: 0, akurat: 0 });
+        d.total++; if (allOk) d.akurat++;
+        if (!allOk) r.viol.push({ batch: b, items: evals.filter(e => e.status !== "ok") });
+    });
+    if (r.total) { r.pct = r.akurat / r.total * 100; r.grade = gradeOf(r.pct); }
+    return r;
+}
+
+function computeLoaderStats(batches) {
+    const by = {};
+    (batches || []).forEach(b => { (by[b.loader] = by[b.loader] || []).push(b); });
+    const out = {};
+    Object.keys(by).forEach(n => { out[n] = { name: n, batches: by[n].length, rapor: buildLoaderRapor(by[n]) }; });
+    return out;
+}
+
+function loaderOrder(ls) {
+    return Object.entries(ls).sort((a, b) => {
+        const ra = a[1].rapor, rb = b[1].rapor;
+        if ((ra.total > 0) !== (rb.total > 0)) return ra.total > 0 ? -1 : 1;
+        return (rb.pct || 0) - (ra.pct || 0) || rb.total - ra.total || a[0].localeCompare(b[0]);
+    });
+}
+
+/* ---------- rapor helper: akurasi molases & pendampingan distribusi ---------- */
+function molStatus(absPct) { return absPct <= MOL_OK_PCT ? "ok" : absPct <= MOL_WARN_PCT ? "warn" : "bad"; }
+
+/** Nilai penuangan molases satu batch: aktual (Total KG di loader) vs target (snapshot dari MasterTonase). */
+function evalMolases(b) {
+    const t = b.tgt && b.tgt.molases;
+    if (!(t > 0)) return null;                                   // tidak ada target: tidak dinilai
+    const a = b.mol.total;
+    if (!(a > 0)) return { status: "empty", t, a: 0, dev: 0, pct: 0 };
+    const dev = a - t, pct = dev / t * 100;
+    return { status: molStatus(Math.abs(pct)), t, a, dev, pct };
+}
+
+function computeHelperStats(batches, logs) {
+    const map = {};
+    const H = name => map[name] || (map[name] = {
+        name,
+        mol: { n: 0, kg: 0, min: 0, max: 0, zero: 0, rows: [], noTarget: 0, viol: [], pct: null, grade: null,
+               ev: { n: 0, ok: 0, warn: 0, bad: 0, empty: 0, sumAbs: 0, sumSigned: 0, sumKg: 0, tgtKg: 0, aktKg: 0, total: 0 } },
+        dist: { pens: 0, kg: 0, batches: new Set(), shift: { Pagi: 0, Siang: 0, Malam: 0, Lainnya: 0 }, ops: {} }
+    });
+    let molTagged = 0, distTagged = 0;
+    (batches || []).forEach(b => {
+        if (!b.helperMol) return;
+        molTagged++;
+        const m = H(b.helperMol).mol, kg = b.mol.total;
+        m.n++; m.kg += kg;
+        if (kg <= 0) m.zero++;
+        else { m.min = m.min ? Math.min(m.min, kg) : kg; m.max = Math.max(m.max, kg); }
+        const e = evalMolases(b);
+        const row = { day: b.day, cal: b.cal, jam: b.jam, shift: b.shift, loader: b.loader, pens: b.pens, kg,
+                      tgt: e ? e.t : 0, status: e ? e.status : null, dev: e ? e.dev : 0, pct: e ? e.pct : 0 };
+        m.rows.push(row);
+        if (!e) { m.noTarget++; return; }
+        const v = m.ev;
+        if (e.status === "empty") v.empty++;
+        else {
+            v.n++; v[e.status]++;
+            v.sumAbs += Math.abs(e.pct); v.sumSigned += e.pct; v.sumKg += e.dev; v.tgtKg += e.t; v.aktKg += e.a;
+        }
+        if (e.status !== "ok") m.viol.push(row);
+    });
+    Object.values(map).forEach(h => {
+        const v = h.mol.ev;
+        v.total = v.n + v.empty;
+        if (v.total) { h.mol.pct = v.ok / v.total * 100; h.mol.grade = gradeOf(h.mol.pct); }
+    });
+    (logs || []).forEach(l => {
+        if (!l.helper) return;
+        distTagged++;
+        const d = H(l.helper).dist;
+        d.pens++; d.kg += l.tonase;
+        d.batches.add(l.clientId || (l.day + "|" + l.jam));
+        d.shift[SHIFTS.includes(l.shift) ? l.shift : "Lainnya"]++;
+        const o = d.ops[l.operator || "-"] || (d.ops[l.operator || "-"] = { n: 0, kg: 0 });
+        o.n++; o.kg += l.tonase;
+    });
+    const evalBatches = (batches || []).filter(b => b.helperMol && evalMolases(b)).length;
+    return { map, molTagged, molTotal: (batches || []).length, distTagged, distTotal: (logs || []).length, evalBatches };
+}
+
+/* ---------- rapor unit mixer (Trioliet / Supreme): riwayat muatan & kinerja ---------- */
+function computeMixerStats(batches, logs) {
+    const durBy = {};
+    (logs || []).forEach(l => { const sec = durToSec(l.durasi); if (sec > 0 && l.clientId) durBy[l.clientId] = sec; });
+    const map = {};
+    let tagged = 0;
+    (batches || []).forEach(b => {
+        if (!b.mixerUnit) return;
+        tagged++;
+        const u = map[b.mixerUnit] || (map[b.mixerUnit] = {
+            name: b.mixerUnit, cap: Number(MIXER_CAPACITY_KG[b.mixerUnit]) || 0, over: 0, n: 0, nLoad: 0, sum: 0, min: 0, max: 0, mol: 0, days: {}, shift: { Pagi: 0, Siang: 0, Malam: 0, Lainnya: 0 },
+            loaders: {}, dur: { n: 0, sum: 0, ok: 0, fast: 0, slow: 0 }
+        });
+        const load = b.mol.akhir;                       // Tonase Akhir = muatan mixer setelah molases
+        u.n++; u.mol += b.mol.total;
+        u.shift[SHIFTS.includes(b.shift) ? b.shift : "Lainnya"]++;
+        const d = u.days[b.day] || (u.days[b.day] = { n: 0, nLoad: 0, sum: 0, min: 0, max: 0 });
+        d.n++;
+        const lo = u.loaders[b.loader] || (u.loaders[b.loader] = { n: 0, nLoad: 0, sum: 0 });
+        lo.n++;
+        if (load > 0) {
+            if (u.cap && load > u.cap) u.over++;
+            u.nLoad++; u.sum += load; u.max = Math.max(u.max, load); u.min = u.min ? Math.min(u.min, load) : load;
+            d.nLoad++; d.sum += load; d.max = Math.max(d.max, load); d.min = d.min ? Math.min(d.min, load) : load;
+            lo.nLoad++; lo.sum += load;
+        }
+        const sec = durBy[b.clientId];
+        if (sec) { u.dur.n++; u.dur.sum += sec; u.dur[sopStatus(sec)]++; }
+    });
+    Object.values(map).forEach(u => {
+        u.avg = u.nLoad ? u.sum / u.nLoad : 0;
+        u.util = u.cap && u.nLoad ? u.avg / u.cap * 100 : null;
+    });
+    return { map, tagged, total: (batches || []).length };
+}
+
+function mixerOrder(ms) {
+    const rank = n => { const i = MIXER_UNITS.indexOf(n); return i < 0 ? 99 : i; };
+    return Object.values(ms.map).sort((a, b) => rank(a.name) - rank(b.name) || a.name.localeCompare(b.name));
+}
+
+function helperOrder(hs) {
+    return Object.values(hs.map).sort((a, b) => (b.mol.n + b.dist.pens) - (a.mol.n + a.dist.pens) || a.name.localeCompare(b.name));
+}
+
+/** Urutan operator: yang punya data (kepatuhan tertinggi dulu), lalu yang belum ada data durasi. */
+function raporOrder(st) {
+    return Object.entries(st.ops).sort((a, b) => {
+        const ra = a[1].rapor, rb = b[1].rapor;
+        if ((ra.total > 0) !== (rb.total > 0)) return ra.total > 0 ? -1 : 1;
+        return (rb.pct || 0) - (ra.pct || 0) || rb.total - ra.total || a[0].localeCompare(b[0]);
+    });
+}
+
+/* ============================================================
+ * PEMUATAN DATA
+ * ============================================================ */
+async function loadLive(manual) {
+    if (S.mode !== "live") return;
+    try {
+        const res = await fetch(LIVE_URL + "&t=" + Date.now());
+        const data = await res.json();
+        if (!data || data.ok === false || !data.monitor) throw new Error((data && data.message) || "Data monitor tidak valid");
+        if (S.mode !== "live") return;
+
+        applyServerMeta(data);
+        const mon = data.monitor;
+        S.logs = [...(mon.pagi || []), ...(mon.siang || []), ...(mon.malam || [])].map(normLog);
+        S.batches = (mon.batches || []).map(normBatch);
+        checkServerVersion(data);
+        S.active = mon.active || [];
+        S.from = S.to = data.opDay || mon.opDay || opDayNow();
+        S.lastUpdated = new Date();
+        setNet(true);
+        renderAll();
+        if (manual) toast("Data diperbarui", "success");
+    } catch (err) {
+        console.warn("loadLive:", err);
+        setNet(false);
+        if (manual) toast("Gagal memuat data: " + err.message, "error");
+    }
+}
+
+async function fetchReport(from, to) {
+    const key = from + "|" + to;
+    const hit = REPORT_CACHE.get(key);
+    const isPast = to < opDayNow();
+    if (hit && Date.now() - hit.t < (isPast ? 10 * 60000 : 30000)) return hit.data;
+
+    const res = await fetch(`${REPORT_URL}&from=${from}&to=${to}&t=${Date.now()}`);
+    const data = await res.json();
+    if (!data || data.ok === false) throw new Error((data && data.message) || "Gagal memuat laporan");
+    REPORT_CACHE.set(key, { t: Date.now(), data });
+    return data;
+}
+
+function setHash(h) {   // aman jika halaman dibuka dari file:// atau WebView yang menolak replaceState
+    try { history.replaceState(null, "", h || (location.pathname + location.search)); } catch (e) {}
+}
+
+function setLoading(on) {
+    S.loading = on;
+    $("btnSearch").disabled = on;
+    $("btnSearch").textContent = on ? "Mencari..." : "Cari";
+    $("resultSub").classList.toggle("skeleton", on);
+    if (on) $("resultSub").textContent = "Memuat data...";
+}
+
+async function runSearch(from, to) {
+    if (!isKey(from) || !isKey(to)) return toast("Pilih tanggal 'Dari' dan 'Sampai' terlebih dahulu.", "error");
+    if (from > to) { const t = from; from = to; to = t; }
+    if (diffDays(from, to) + 1 > MAX_RANGE_DAYS) return toast(`Rentang maksimal ${MAX_RANGE_DAYS} hari.`, "error");
+
+    // Hari ini = tampilan Live
+    if (from === to && from === opDayNow()) return goLive();
+
+    const req = ++S.reportRequest;
+    setLoading(true);
+    try {
+        const data = await fetchReport(from, to);
+        if (req !== S.reportRequest) return;      // ada pencarian yang lebih baru
+        applyServerMeta(data);
+        S.mode = "report";
+        S.from = data.from; S.to = data.to;
+        S.logs = (data.logs || []).map(normLog);
+        S.batches = (data.batches || []).map(normBatch);
+        checkServerVersion(data);
+        S.active = [];
+        S.showAll = {};
+        S.lastUpdated = new Date();
+        $("dFrom").value = S.from; $("dTo").value = S.to;
+        setHash(`#from=${S.from}&to=${S.to}`);
+        setNet(true);
+        renderAll();
+    } catch (err) {
+        console.warn("runSearch:", err);
+        toast("Gagal mencari data: " + err.message, "error");
+        $("resultSub").textContent = "";
+    } finally {
+        if (req === S.reportRequest) setLoading(false);
+    }
+}
+
+function goLive() {
+    S.reportRequest++;
+    S.mode = "live";
+    S.showAll = {};
+    setHash("");
+    const t = opDayNow();
+    $("dFrom").value = t; $("dTo").value = t;
+    setLoading(false);
+    return loadLive(true);
+}
+
+/* ============================================================
+ * RENDER
+ * ============================================================ */
+function renderAll() {
+    const st = computeStats(S.logs);
+    S.stats = st;
+    S.loaderStats = computeLoaderStats(S.batches);
+    S.helperStats = computeHelperStats(S.batches, S.logs);
+    S.mixerStats = computeMixerStats(S.batches, S.logs);
+    const live = S.mode === "live";
+
+    $("dFrom").max = $("dTo").max = opDayNow();
+    $("btnLive").classList.toggle("on", live);
+
+    const single = S.from === S.to;
+    const period = single ? fmtLong(S.from) : `${fmtMid(S.from)} s/d ${fmtMid(S.to)} (${diffDays(S.from, S.to) + 1} hari)`;
+    $("modeLabel").textContent = live ? `🔴 LIVE - hari operasional ${fmtLong(S.from)}` : `📅 Riwayat - ${period}`;
+    $("resultTitle").textContent = live ? "Distribusi hari ini (sementara)" : "Hasil pencarian: " + period;
+    $("resultSub").classList.remove("skeleton");
+    $("resultSub").textContent = `${st.rows} pen | ${nf(st.kg)} kg | ${st.batches.size} batch`;
+    $("lastUpdated").textContent = "Last Updated: " + (S.lastUpdated ? S.lastUpdated.toLocaleTimeString("id-ID") : "-");
+    $("btnPdf").disabled = $("btnCsv").disabled = st.rows === 0;
+    $("btnRapor").disabled = st.rows === 0 && S.batches.length === 0;
+
+    renderSummary(st, live);
+    renderActive(live);
+    renderRekap(st, single);
+    renderRapor(st);
+    renderLogs(st, single);
+}
+
+function card(label, value, cls, sub) {
+    return `<div class="panel p-4"><p class="label">${esc(label)}</p><div class="text-2xl lg:text-3xl font-extrabold ${cls} mt-1">${value}</div><p class="text-[10px] font-semibold text-slate-500 mt-1">${esc(sub || "")}</p></div>`;
+}
+
+/** Total aktual yang benar-benar diproses: Σ Tonase Akhir (timbangan real di Loader) per batch.
+ *  Sengaja di level batch, TIDAK dipecah per pen, karena Tonase Akhir memang satu angka untuk satu batch. */
+function computeAktualDiproses(batches) {
+    let kg = 0, n = 0;
+    (batches || []).forEach(b => { if (b.mol && b.mol.akhir > 0) { kg += b.mol.akhir; n++; } });
+    return { kg, n };
+}
+
+function renderSummary(st, live) {
+    const totalDays = diffDays(S.from, S.to) + 1;
+    const daysWith = Object.keys(st.days).length;
+    const pct = st.durBatches ? st.sopOk / st.durBatches * 100 : 0;
+    const pctTone = pct >= RAPOR_GRADES[0].min ? "text-emerald-400" : pct >= RAPOR_GRADES[1].min ? "text-amber-400" : "text-red-400";
+    const first = live
+        ? card("Antrian Aktif", S.active.length, "text-amber-400", "batch di mixer")
+        : card("Hari Ada Data", daysWith, "text-amber-400", `dari ${totalDays} hari`);
+
+    const ak = computeAktualDiproses(S.batches);
+    const selisihAgg = ak.kg - st.kg;
+    const aktualSub = ak.n
+        ? `${ak.n} batch | ${Math.abs(selisihAgg) >= 1 ? `${signedKg(selisihAgg)} dari distribusi tercatat` : "sesuai distribusi tercatat"}`
+        : "belum ada Tonase Akhir";
+
+    $("summaryCards").innerHTML = [
+        first,
+        card("Pen Terdistribusi", nf(st.rows), "text-emerald-400", `${st.batches.size} batch mixing`),
+        card("Total KG (Distribusi)", nf(st.kg), "text-white", daysWith > 1 ? `${nf(st.kg / daysWith)} kg / hari` : "tercatat per pen di mixer"),
+        card("Total Aktual Diproses", ak.n ? nf(ak.kg) : "-", "text-emerald-400", aktualSub),
+        card("Rata-rata Mixing", st.avgSec ? fmtDur(st.avgSec) : "-", "text-sky-300", `SOP ${sopText()}`),
+        card("Sesuai SOP", st.durBatches ? `${st.sopOk}<span class="text-sm text-slate-400"> / ${st.durBatches}</span>` : "-", pctTone, st.durBatches ? `${Math.round(pct)}% | ${st.sopSlow} > ${fmtDur(SOP_MAX_SEC)} | ${st.sopFast} < ${fmtDur(SOP_MIN_SEC)}` : "belum ada data"),
+        card("Operator Mixer", Object.keys(st.ops).length, "text-white", "yang mendistribusi")
+    ].join("");
+}
+
+function parseStart(raw) {
+    if (!raw) return null;
+    const t = String(raw).trim();
+    const m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (m) return new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +(m[6] || 0));
+    const d = new Date(t);
+    return isNaN(d) ? null : d;
+}
+
+function renderActive(live) {
+    $("activeSection").classList.toggle("hidden", !live);
+    if (!live) return;
+    const con = $("activeCon");
+    if (!S.active.length) { con.innerHTML = '<p class="text-slate-400 text-xs italic ml-2">Tidak ada pakan di Mixer</p>'; return; }
+    con.innerHTML = S.active.map(i => {
+        const stopped = !!(i.jamStop && String(i.jamStop).trim());
+        const start = parseStart(i.jamStart);
+        return `<div class="card-active ${stopped ? "card-ready" : ""} p-4 rounded-2xl">
+            <div class="flex justify-between text-[10px] font-black uppercase text-amber-400 mb-2"><span>${esc(i.operator)}</span><span>${esc(i.shift)}</span></div>
+            <div class="font-extrabold text-white text-sm mb-3 break-words">${esc(i.pens)}</div>
+            <div class="flex justify-between items-end">
+                ${stopped
+                    ? '<span class="text-[10px] font-black uppercase text-emerald-400">Siap distribusi</span>'
+                    : `<span class="elapsed text-sm font-black text-amber-300" ${start ? `data-start="${start.getTime()}"` : ""}>${start ? "--:--" : "mixing"}</span>`}
+                <span class="font-black text-lg text-amber-400">${nf(i.tonase)} kg</span>
+            </div>
+        </div>`;
+    }).join("");
+    tickElapsed();
+}
+
+function tickElapsed() {
+    if (S.mode !== "live" || document.hidden) return;
+    document.querySelectorAll(".elapsed[data-start]").forEach(el => {
+        const sec = Math.max(0, Math.floor((Date.now() - Number(el.dataset.start)) / 1000));
+        const stt = sec > SOP_MAX_SEC ? "slow" : sec >= SOP_MIN_SEC ? "ok" : "run";
+        el.textContent = fmtDur(sec) + (stt === "slow" ? " (lewat SOP)" : stt === "ok" ? " (dalam SOP)" : "");
+        el.classList.toggle("text-red-400", stt === "slow");
+        el.classList.toggle("text-emerald-400", stt === "ok");
+        el.classList.toggle("text-amber-300", stt === "run");
+    });
+}
+
+function renderRekap(st, single) {
+    const total = st.kg || 1;
+    const bars = SHIFTS.concat(st.shift.Lainnya.n ? ["Lainnya"] : []).map(s => {
+        const x = st.shift[s];
+        return `<div>
+            <div class="flex justify-between text-[11px] font-extrabold"><span class="text-slate-200">${esc(SHIFT_LABEL[s] || s)}</span><span class="text-emerald-400">${nf(x.kg)} kg</span></div>
+            <div class="bar-track mt-1"><div class="bar-fill" style="width:${Math.round(x.kg / total * 100)}%"></div></div>
+            <div class="text-[10px] font-semibold text-slate-500 mt-1">${x.n} pen | ${Math.round(x.kg / total * 100)}%</div>
+        </div>`;
+    }).join("");
+    $("rekapShift").innerHTML = bars;
+
+    const cols = SHIFTS.concat(st.shift.Lainnya.n ? ["Lainnya"] : []);
+    const head = `<tr><th>Pen</th>${cols.map(c => `<th>${c}</th>`).join("")}<th>Total</th><th>x</th></tr>`;
+    const pens = Object.entries(st.pens).sort((a, b) => b[1].total - a[1].total);
+    $("rekapPen").innerHTML = pens.length
+        ? `<table class="tbl w-full"><thead>${head}</thead><tbody>${pens.map(([n, v]) =>
+            `<tr><td>${esc(n)}</td>${cols.map(c => `<td>${v[c] ? nf(v[c]) : "-"}</td>`).join("")}<td class="!text-emerald-400">${nf(v.total)}</td><td class="!text-slate-500">${v.n}</td></tr>`).join("")}</tbody>
+            <tfoot><tr><td>Total</td>${cols.map(c => `<td>${nf(st.shift[c].kg)}</td>`).join("")}<td>${nf(st.kg)}</td><td>${st.rows}</td></tr></tfoot></table>`
+        : '<p class="text-[11px] text-slate-500 py-4">Belum ada data.</p>';
+
+    const dayKeys = Object.keys(st.days).sort();
+    $("rekapDayBox").classList.toggle("hidden", single || dayKeys.length < 2);
+    if (!single && dayKeys.length >= 2) {
+        $("rekapDay").innerHTML = `<table class="tbl w-full"><thead><tr><th>Tanggal</th>${cols.map(c => `<th>${c}</th>`).join("")}<th>Total</th><th>Pen</th></tr></thead><tbody>${dayKeys.map(k => {
+            const v = st.days[k];
+            return `<tr><td>${esc(fmtDM(k) + " " + noon(k).toLocaleDateString("id-ID", { weekday: "short" }))}</td>${cols.map(c => `<td>${v[c] ? nf(v[c]) : "-"}</td>`).join("")}<td class="!text-emerald-400">${nf(v.total)}</td><td class="!text-slate-500">${v.n}</td></tr>`;
+        }).join("")}</tbody></table>`;
+    }
+}
+
+function raporCard(name, o) {
+    const r = o.rapor;
+    const head = `<div class="flex justify-between items-start gap-2">
+        <div class="min-w-0">
+            <p class="font-extrabold text-sm text-white truncate">${esc(name)}</p>
+            <p class="text-[10px] font-semibold text-slate-400">${nf(o.n)} pen | ${nf(o.kg)} kg | ${r.total} batch dinilai</p>
+        </div>
+        ${r.grade ? `<span class="px-2 py-1 rounded-lg border text-[10px] font-extrabold uppercase whitespace-nowrap ${TONE[r.grade.tone].badge}">${esc(r.grade.label)}</span>`
+                  : '<span class="px-2 py-1 rounded-lg border border-slate-600 text-[10px] font-extrabold uppercase text-slate-400 whitespace-nowrap">Belum ada data</span>'}
+    </div>`;
+    if (!r.total) {
+        return `<div class="log-card">${head}<p class="text-[11px] text-slate-500 mt-3">Durasi mixing belum tercatat pada periode ini.</p></div>`;
+    }
+    const w = n => (r.total ? (n / r.total * 100).toFixed(1) : 0);
+    const rows = r.viol.slice(0, 30).map(b => `<div class="flex justify-between items-center gap-2 text-[10px] font-bold">
+            <span class="text-slate-400 whitespace-nowrap">${esc(fmtDM(b.cal || b.day) + " " + b.jam)} | ${esc(b.shift)}</span>
+            <span class="text-slate-300 truncate">${esc(b.pens.join(", "))}</span>
+            <span class="px-1.5 py-0.5 rounded-md whitespace-nowrap ${b.status === "slow" ? "bg-red-500/20 text-red-300" : "bg-amber-500/20 text-amber-300"}">${esc(fmtDur(b.sec))}</span>
+        </div>`).join("");
+    const details = r.viol.length
+        ? `<details class="mt-3"><summary class="cursor-pointer text-[10px] font-extrabold uppercase text-slate-300">Batch di luar SOP (${r.viol.length})</summary>
+            <div class="mt-2 space-y-1.5">${rows}${r.viol.length > 30 ? `<p class="text-[10px] text-slate-500">+${r.viol.length - 30} lainnya, lihat PDF rapor.</p>` : ""}</div></details>`
+        : '<p class="text-[10px] font-bold text-emerald-400 mt-3">Semua batch sesuai SOP.</p>';
+    return `<div class="log-card">
+        ${head}
+        <div class="mt-3 flex items-end justify-between gap-3">
+            <span class="text-3xl font-extrabold ${TONE[r.grade.tone].text}">${Math.round(r.pct)}%</span>
+            <span class="text-[10px] font-bold text-slate-400 text-right">rata-rata ${fmtDur(r.avgSec)}<br>tercepat ${fmtDur(r.minSec)} | terlama ${fmtDur(r.maxSec)}</span>
+        </div>
+        <div class="bar-track mt-2 flex">
+            <div class="h-full bg-emerald-500" style="width:${w(r.ok)}%"></div>
+            <div class="h-full bg-amber-500" style="width:${w(r.fast)}%"></div>
+            <div class="h-full bg-red-500" style="width:${w(r.slow)}%"></div>
+        </div>
+        <div class="flex justify-between text-[10px] font-bold mt-2">
+            <span class="text-emerald-400">Sesuai ${r.ok}</span>
+            <span class="text-amber-400">&lt; ${fmtDur(SOP_MIN_SEC)}: ${r.fast}</span>
+            <span class="text-red-400">&gt; ${fmtDur(SOP_MAX_SEC)}: ${r.slow}</span>
+        </div>
+        ${details}
+        <button type="button" data-rapor="${esc(name)}" data-kind="mixer" class="btn btn-ghost w-full mt-3">🧾 PDF rapor ${esc(name)}</button>
+    </div>`;
+}
+
+function signedPct(p) { return (p > 0 ? "+" : "") + p.toFixed(1).replace(".", ",") + "%"; }
+function signedKg(k) { return (k > 0 ? "+" : "") + nf(k) + " kg"; }
+const ITEM_LABEL = { jagung: "Jagung", konsentrat: "Konsentrat" };
+
+function gradeBadge(g) {
+    return g ? `<span class="px-2 py-1 rounded-lg border text-[10px] font-extrabold uppercase whitespace-nowrap ${TONE[g.tone].badge}">${esc(g.label)}</span>`
+             : '<span class="px-2 py-1 rounded-lg border border-slate-600 text-[10px] font-extrabold uppercase text-slate-400 whitespace-nowrap">Belum ada data</span>';
+}
+
+function loaderCard(name, o) {
+    const r = o.rapor;
+    const head = `<div class="flex justify-between items-start gap-2">
+        <div class="min-w-0">
+            <p class="font-extrabold text-sm text-white truncate">${esc(name)}</p>
+            <p class="text-[10px] font-semibold text-slate-400">${o.batches} batch | ${r.total} dinilai${r.noTarget ? ` | ${r.noTarget} tanpa target` : ""}</p>
+        </div>${gradeBadge(r.grade)}</div>`;
+    if (!r.total) {
+        return `<div class="log-card">${head}<p class="text-[11px] text-slate-500 mt-3">${r.noTarget
+            ? "Batch dicatat sebelum fitur target aktif, jadi akurasinya belum bisa dinilai." : "Tidak ada batch yang bisa dinilai pada periode ini."}</p></div>`;
+    }
+    const items = WEIGH_ITEMS.map(it => {
+        const x = r.items[it.key], tot = x.n + x.empty;
+        if (!tot) return `<div class="bg-slate-900/60 rounded-xl p-2.5 text-[10px] font-semibold text-slate-500">${it.label}: tidak ada target pada batch ini</div>`;
+        const pct = x.ok / tot * 100, g = gradeOf(pct), bias = x.n ? x.sumSigned / x.n : 0;
+        return `<div class="bg-slate-900/60 rounded-xl p-2.5">
+            <div class="flex justify-between text-[11px] font-extrabold"><span class="text-slate-200">${it.label}</span><span class="${TONE[g.tone].text}">${Math.round(pct)}% akurat</span></div>
+            <p class="text-[10px] font-semibold text-slate-400 mt-1">${x.ok}/${tot} batch dalam +/-${WEIGH_OK_PCT}% | simpangan rata-rata ${x.n ? (x.sumAbs / x.n).toFixed(1).replace(".", ",") : "-"}%${x.empty ? ` | ${x.empty} tidak diisi` : ""}</p>
+            ${x.n ? `<p class="text-[10px] font-bold mt-0.5"><span class="${bias > 0 ? "text-amber-300" : "text-sky-300"}">${bias > 0 ? "cenderung lebih" : "cenderung kurang"} ${signedPct(bias)}</span> <span class="text-slate-400">| selisih total ${signedKg(x.sumKg)}</span></p>` : ""}
+        </div>`;
+    }).join("");
+    const rows = r.viol.slice(0, 30).map(v => `<div class="text-[10px] font-bold">
+            <div class="flex justify-between gap-2"><span class="text-slate-400 whitespace-nowrap">${esc(fmtDM(v.batch.cal || v.batch.day) + " " + v.batch.jam)} | ${esc(v.batch.shift)}</span><span class="text-slate-300 truncate">${esc(v.batch.pens)}</span></div>
+            ${v.items.map(e => e.status === "empty"
+                ? `<div class="text-red-300">${ITEM_LABEL[e.key]}: tidak diisi (target ${nf(e.t)} kg)</div>`
+                : `<div class="${e.status === "bad" ? "text-red-300" : "text-amber-300"}">${ITEM_LABEL[e.key]}: target ${nf(e.t)} | aktual ${nf(e.a)} (${signedPct(e.pct)})</div>`).join("")}
+        </div>`).join("");
+    const details = r.viol.length
+        ? `<details class="mt-3"><summary class="cursor-pointer text-[10px] font-extrabold uppercase text-slate-300">Di luar toleransi (${r.viol.length} batch)</summary><div class="mt-2 space-y-2">${rows}${r.viol.length > 30 ? `<p class="text-[10px] text-slate-500">+${r.viol.length - 30} lainnya, lihat PDF rapor.</p>` : ""}</div></details>`
+        : '<p class="text-[10px] font-bold text-emerald-400 mt-3">Semua penimbangan dalam toleransi.</p>';
+    return `<div class="log-card">${head}
+        <div class="mt-3 flex items-end justify-between gap-3">
+            <span class="text-3xl font-extrabold ${TONE[r.grade.tone].text}">${Math.round(r.pct)}%</span>
+            <span class="text-[10px] font-bold text-slate-400 text-right">batch akurat<br>${r.akurat} dari ${r.total}</span>
+        </div>
+        <div class="mt-3 space-y-2">${items}</div>${details}
+        <button type="button" data-rapor="${esc(name)}" data-kind="loader" class="btn btn-ghost w-full mt-3">🧾 PDF rapor ${esc(name)}</button>
+    </div>`;
+}
+
+function helperCard(h) {
+    const m = h.mol, v = m.ev, d = h.dist;
+    const ops = Object.entries(d.ops).sort((a, b) => b[1].n - a[1].n).slice(0, 3);
+    const molBox = v.total
+        ? `<p class="label">Akurasi molases</p>
+           <p class="text-lg font-extrabold ${TONE[m.grade.tone].text}">${Math.round(m.pct)}% <span class="text-[10px] text-slate-400">akurat</span></p>
+           <p class="text-[10px] font-semibold text-slate-400">${v.ok}/${v.total} batch dalam +/-${MOL_OK_PCT}%<br>target ${nf(v.tgtKg)} kg | aktual ${nf(v.aktKg)} kg</p>
+           ${v.n ? `<p class="text-[10px] font-bold mt-0.5 ${v.sumSigned > 0 ? "text-amber-300" : "text-sky-300"}">${v.sumSigned > 0 ? "cenderung lebih" : "cenderung kurang"} ${signedPct(v.sumSigned / v.n)} | selisih ${signedKg(v.sumKg)}</p>` : ""}
+           ${v.empty ? `<p class="text-[10px] font-bold text-red-400">${v.empty} batch molases tidak tercatat</p>` : ""}`
+        : `<p class="label">Penuang molases</p>
+           <p class="text-lg font-extrabold text-white">${nf(m.kg)} <span class="text-[10px] text-slate-400">kg</span></p>
+           <p class="text-[10px] font-semibold text-slate-400">${m.n} batch | belum ada data target${m.zero ? `<br><span class="text-red-400">${m.zero} batch tercatat 0 kg (cek data)</span>` : ""}</p>`;
+    const rows = m.viol.slice(0, 30).map(x => `<div class="text-[10px] font-bold">
+            <div class="flex justify-between gap-2"><span class="text-slate-400 whitespace-nowrap">${esc(fmtDM(x.cal || x.day) + " " + x.jam)} | ${esc(x.shift)}</span><span class="text-slate-300 truncate">${esc(x.pens)}</span></div>
+            <div class="${x.status === "bad" || x.status === "empty" ? "text-red-300" : "text-amber-300"}">${x.status === "empty" ? `molases tidak tercatat (target ${nf(x.tgt)} kg)` : `target ${nf(x.tgt)} | aktual ${nf(x.kg)} kg (${signedPct(x.pct)})`}</div>
+        </div>`).join("");
+    const details = m.viol.length
+        ? `<details class="mt-3"><summary class="cursor-pointer text-[10px] font-extrabold uppercase text-slate-300">Molases di luar toleransi (${m.viol.length} batch)</summary><div class="mt-2 space-y-2">${rows}${m.viol.length > 30 ? `<p class="text-[10px] text-slate-500">+${m.viol.length - 30} lainnya, lihat PDF rapor.</p>` : ""}</div></details>`
+        : (v.total ? '<p class="text-[10px] font-bold text-emerald-400 mt-3">Semua penuangan molases dalam toleransi.</p>' : "");
+    return `<div class="log-card">
+        <div class="flex justify-between items-start gap-2">
+            <div class="min-w-0">
+                <p class="font-extrabold text-sm text-white truncate">${esc(h.name)}</p>
+                <p class="text-[10px] font-semibold text-slate-400">${m.n} batch molases | ${d.pens} pen didampingi${m.noTarget && v.total ? ` | ${m.noTarget} tanpa target` : ""}</p>
+            </div>${m.grade ? gradeBadge(m.grade) : ""}
+        </div>
+        <div class="mt-3 grid grid-cols-2 gap-2">
+            <div class="bg-slate-900/60 rounded-xl p-2.5">${molBox}</div>
+            <div class="bg-slate-900/60 rounded-xl p-2.5">
+                <p class="label">Pendamping distribusi</p>
+                <p class="text-lg font-extrabold text-white">${nf(d.kg)} <span class="text-[10px] text-slate-400">kg</span></p>
+                <p class="text-[10px] font-semibold text-slate-400">${d.pens} pen | ${d.batches.size} batch<br>Pagi ${d.shift.Pagi} | Siang ${d.shift.Siang} | Malam ${d.shift.Malam}</p>
+            </div>
+        </div>
+        ${ops.length ? `<p class="text-[10px] font-semibold text-slate-400 mt-2">Bersama operator mixer: ${ops.map(([n, x]) => esc(n) + " (" + x.n + " pen)").join(", ")}</p>` : ""}
+        ${details}
+        <button type="button" data-rapor="${esc(h.name)}" data-kind="helper" class="btn btn-ghost w-full mt-3">🧾 PDF rapor ${esc(h.name)}</button>
+    </div>`;
+}
+
+function mixerCard(u, tagged) {
+    const share = tagged ? Math.round(u.n / tagged * 100) : 0;
+    const dayKeys = Object.keys(u.days).sort();
+    const sopPct = u.dur.n ? u.dur.ok / u.dur.n * 100 : null;
+    const sopTone = sopPct === null ? "text-slate-400" : TONE[gradeOf(sopPct).tone].text;
+    const loaders = Object.entries(u.loaders).sort((a, b) => b[1].n - a[1].n);
+    const dayRows = dayKeys.map(k => {
+        const d = u.days[k];
+        return `<div class="flex justify-between gap-2 text-[10px] font-bold"><span class="text-slate-400">${esc(fmtDM(k))}</span><span class="text-slate-300">${d.n} batch</span><span class="text-slate-300">rata-rata ${d.nLoad ? nf(d.sum / d.nLoad) : "-"} kg</span><span class="text-slate-400">maks ${d.max ? nf(d.max) : "-"}</span></div>`;
+    }).join("");
+    return `<div class="log-card">
+        <div class="flex justify-between items-start gap-2">
+            <div class="min-w-0"><p class="font-extrabold text-sm text-white">${esc(u.name)}</p><p class="text-[10px] font-semibold text-slate-400">${u.n} batch | ${share}% dari batch bertanda unit</p></div>
+        </div>
+        <div class="mt-3 flex items-end justify-between gap-3">
+            <span class="text-3xl font-extrabold text-white">${u.nLoad ? nf(u.avg) : "-"}<span class="text-sm text-slate-400"> kg</span></span>
+            <span class="text-[10px] font-bold text-slate-400 text-right">rata-rata muatan / batch</span>
+        </div>
+        <div class="mt-3 grid grid-cols-3 gap-2">
+            <div class="bg-slate-900/60 rounded-xl p-2"><p class="label">Terbesar</p><p class="text-sm font-extrabold text-white">${u.max ? nf(u.max) : "-"}</p></div>
+            <div class="bg-slate-900/60 rounded-xl p-2"><p class="label">Terkecil</p><p class="text-sm font-extrabold text-white">${u.min ? nf(u.min) : "-"}</p></div>
+            <div class="bg-slate-900/60 rounded-xl p-2"><p class="label">Total muatan</p><p class="text-sm font-extrabold text-white">${nf(u.sum)}</p></div>
+        </div>
+        ${u.cap ? `<p class="text-[10px] font-bold mt-2 ${u.over ? "text-red-300" : "text-slate-300"}">Kapasitas acuan ${nf(u.cap)} kg | utilisasi rata-rata ${u.util === null ? "-" : Math.round(u.util) + "%"} | ${u.over} batch melebihi kapasitas</p>`
+                   : '<p class="text-[10px] font-semibold text-slate-500 mt-2">Kapasitas acuan belum diisi (MIXER_CAPACITY_KG), jadi utilisasi belum dihitung.</p>'}
+        <p class="text-[10px] font-bold mt-2 ${sopTone}">${u.dur.n ? `Mixing rata-rata ${fmtDur(u.dur.sum / u.dur.n)} | sesuai SOP ${Math.round(sopPct)}% (${u.dur.ok}/${u.dur.n} batch)` : "Durasi mixing belum tercatat"}</p>
+        <p class="text-[10px] font-semibold text-slate-400 mt-1">Pagi ${u.shift.Pagi} | Siang ${u.shift.Siang} | Malam ${u.shift.Malam}${u.shift.Lainnya ? " | Lainnya " + u.shift.Lainnya : ""}</p>
+        ${loaders.length ? `<p class="text-[10px] font-semibold text-slate-400 mt-1">Dipakai operator loader: ${loaders.slice(0, 4).map(([n, x]) => esc(n) + " (" + x.n + ")").join(", ")}</p>` : ""}
+        <details class="mt-3"><summary class="cursor-pointer text-[10px] font-extrabold uppercase text-slate-300">Riwayat muatan per hari (${dayKeys.length} hari)</summary><div class="mt-2 space-y-1.5">${dayRows}</div></details>
+        <button type="button" data-rapor="${esc(u.name)}" data-kind="unit" class="btn btn-ghost w-full mt-3">🧾 PDF rapor ${esc(u.name)}</button>
+    </div>`;
+}
+
+const RAPOR_LABEL = { mixer: "Mixer", loader: "Loader", helper: "Helper", unit: "Unit" };
+
+function renderRapor(st) {
+    const tab = S.raporTab;
+    document.querySelectorAll("[data-rtab]").forEach(b => b.classList.toggle("on", b.dataset.rtab === tab));
+    $("raporSection").classList.toggle("hidden", st.rows === 0 && S.batches.length === 0);
+    document.querySelectorAll(".sopMinMax").forEach(e => e.textContent = sopText());
+    document.querySelectorAll(".sopMin").forEach(e => e.textContent = fmtDur(SOP_MIN_SEC));
+    document.querySelectorAll(".sopMax").forEach(e => e.textContent = fmtDur(SOP_MAX_SEC));
+    $("btnRapor").textContent = "🧾 Rapor " + RAPOR_LABEL[tab];
+
+    const note = t => `<p class="md:col-span-2 xl:col-span-3 text-[10px] font-semibold text-slate-500">${t}</p>`;
+    let html = "";
+    if (tab === "mixer") {
+        $("raporDesc").innerHTML = `Rapor operator mixer: kepatuhan SOP mixing <span class="text-emerald-400">(${sopText()})</span>. Dinilai dari durasi mixing tiap batch (start mixing di Loader sampai stop di Mixer). Sesuai SOP = <span class="text-emerald-400">hijau</span>, kurang dari ${fmtDur(SOP_MIN_SEC)} = <span class="text-amber-400">oranye</span>, lebih dari ${fmtDur(SOP_MAX_SEC)} = <span class="text-red-400">merah</span>. Predikat: 90% ke atas Sesuai SOP, 70-89% Perlu Perhatian, di bawah 70% Di Bawah SOP.`;
+        html = raporOrder(st).map(([n, o]) => raporCard(n, o)).join("");
+    } else if (tab === "loader") {
+        $("raporDesc").innerHTML = `Rapor operator loader: akurasi penimbangan <b class="text-slate-300">Tebon Jagung</b> dan <b class="text-slate-300">Konsentrat</b> (aktual vs target tiap batch; target = snapshot saat batch disimpan). Akurat = selisih sampai ${WEIGH_OK_PCT}%, perlu cek ${WEIGH_OK_PCT}-${WEIGH_WARN_PCT}%, menyimpang lebih dari ${WEIGH_WARN_PCT}%. Batch akurat = semua bahan yang dinilai akurat. Predikat memakai skala yang sama dengan rapor mixer.`;
+        const list = loaderOrder(S.loaderStats);
+        const noT = list.reduce((a, [, o]) => a + o.rapor.noTarget, 0);
+        html = (noT ? note(`${noT} batch dicatat sebelum fitur target aktif, tidak ikut dinilai.`) : "") + list.map(([n, o]) => loaderCard(n, o)).join("");
+    } else if (tab === "helper") {
+        $("raporDesc").innerHTML = `Rapor helper: <b class="text-slate-300">akurasi penuangan molases</b> (Total KG aktual vs target molases dari MasterTonase yang tersimpan saat batch disimpan; akurat sampai ${MOL_OK_PCT}%, perlu cek ${MOL_OK_PCT}-${MOL_WARN_PCT}%, menyimpang lebih dari ${MOL_WARN_PCT}%) dan aktivitas <b class="text-slate-300">pendampingan distribusi</b> (dipilih di aplikasi Mixer). Predikat molases memakai skala yang sama dengan rapor lain.`;
+        const hs = S.helperStats, list = helperOrder(hs);
+        html = note(`Nama helper tercatat pada ${hs.molTagged} dari ${hs.molTotal} batch (molases; ${hs.evalBatches} punya target dan ikut dinilai) dan ${hs.distTagged} dari ${hs.distTotal} pen (distribusi). Data sebelum pilihan helper/target aktif tidak ikut dinilai.`) + list.map(h => helperCard(h)).join("");
+    } else {
+        $("raporDesc").innerHTML = `Rapor unit mixer: riwayat <b class="text-slate-300">muatan</b> (Tonase Akhir tiap batch setelah molases) untuk unit yang dipilih operator loader, ditambah kepatuhan SOP mixing pada unit tersebut. Isi <code>MIXER_CAPACITY_KG</code> di script untuk melihat % utilisasi terhadap kapasitas.`;
+        const ms = S.mixerStats, list = mixerOrder(ms);
+        html = note(`Unit mixer tercatat pada ${ms.tagged} dari ${ms.total} batch. Batch sebelum pilihan unit aktif tidak ikut.`) + list.map(u => mixerCard(u, ms.tagged)).join("");
+    }
+    $("raporCards").innerHTML = html || '<p class="text-[11px] text-slate-500">Belum ada data.</p>';
+}
+
+function timeLabel(l, forceDate) {
+    return (forceDate || l.cal !== l.day) && l.cal ? `${fmtDM(l.cal)} ${l.jam}` : l.jam;
+}
+
+function logCard(l, forceDate) {
+    const sec = durToSec(l.durasi);
+    const stt = sopStatus(sec);
+    const durCls = stt === "slow" ? "bg-red-500/20 text-red-300" : stt === "fast" ? "bg-amber-500/20 text-amber-300" : "bg-emerald-500/15 text-emerald-300";
+    const dur = sec ? `<span class="px-1.5 py-0.5 rounded-md ${durCls}">${esc(l.durasi)}</span>` : "";
+    return `<div class="log-card">
+        <div class="flex justify-between items-start gap-2">
+            <span class="font-extrabold text-xs text-white break-words">${esc(l.pen)}</span>
+            <span class="font-black text-emerald-400 text-xs whitespace-nowrap">${nf(l.tonase)} kg</span>
+        </div>
+        <div class="flex justify-between items-center gap-2 text-[9px] font-bold text-slate-400 uppercase mt-2">
+            <span class="truncate">${esc(l.operator)}${l.helper ? " + " + esc(l.helper) : ""}</span>
+            <span class="flex items-center gap-1.5 whitespace-nowrap">${dur}<span>${esc(timeLabel(l, forceDate))}</span></span>
+        </div>
+    </div>`;
+}
+
+function renderLogs(st, single) {
+    const q = S.query.trim().toLowerCase();
+    const live = S.mode === "live";
+    let rows = S.logs.filter(l => !q || l.pen.toLowerCase().includes(q) || l.operator.toLowerCase().includes(q));
+    rows = rows.slice().sort((a, b) => (a.waktu < b.waktu ? -1 : a.waktu > b.waktu ? 1 : 0));
+    if (live) rows.reverse();                       // live: terbaru di atas
+
+    const cols = SHIFTS.concat(S.logs.some(l => !SHIFTS.includes(l.shift)) ? ["Lainnya"] : []);
+    const shown = S.shiftFilter === "all" ? cols : cols.filter(c => c === S.shiftFilter);
+    $("logCols").className = "grid grid-cols-1 gap-4 " + (shown.length === 1 ? "" : shown.length === 2 ? "lg:grid-cols-2" : shown.length === 4 ? "lg:grid-cols-4" : "lg:grid-cols-3");
+
+    $("logCols").innerHTML = shown.map(c => {
+        const list = rows.filter(l => (c === "Lainnya" ? !SHIFTS.includes(l.shift) : l.shift === c));
+        const kg = list.reduce((a, b) => a + b.tonase, 0);
+        const limit = S.showAll[c] ? list.length : MAX_CARDS;
+        const body = list.length
+            ? list.slice(0, limit).map(l => logCard(l, !single)).join("") +
+              (list.length > limit ? `<button type="button" data-more="${esc(c)}" class="btn btn-ghost w-full">Tampilkan semua (${list.length})</button>` : "")
+            : '<p class="text-center text-[11px] text-slate-500 py-10">Belum ada data</p>';
+        return `<div class="shift-column p-4">
+            <h2 class="text-center font-extrabold text-slate-300 text-[11px] uppercase tracking-wider italic">${esc(SHIFT_LABEL[c] || c)}</h2>
+            <p class="text-center text-[10px] font-bold text-slate-500 mt-1 mb-4">${list.length} pen | ${nf(kg)} kg</p>
+            <div class="space-y-2.5">${body}</div>
+        </div>`;
+    }).join("");
+
+    const empty = st.rows === 0;
+    $("emptyBox").classList.toggle("hidden", !empty);
+    $("emptyBox").textContent = live ? "Belum ada distribusi pada hari operasional ini." : "Tidak ada data distribusi pada tanggal tersebut.";
+}
+
+/* ============================================================
+ * UNDUH: CSV & PDF
+ * ============================================================ */
+function reportBaseName() {
+    return "Laporan_Distribusi_Pakan_" + (S.from === S.to ? S.from : `${S.from}_sd_${S.to}`);
+}
+
+function downloadBlob(blob, name) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+function buildCsv(logs) {
+    const q = v => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`;
+    const head = ["Hari Operasional", "Tanggal", "Jam", "Shift", "Pen", "Operator Mixer", "Helper Distribusi", "Tonase (kg)", "Durasi Mixing (mm:ss)"];
+    const rows = logs.slice().sort((a, b) => (a.waktu < b.waktu ? -1 : 1)).map(l => [l.day, l.cal, l.jam, l.shift, l.pen, l.operator, l.helper, Math.round(l.tonase), l.durasi]);
+    return "\ufeff" + [head, ...rows].map(r => r.map(q).join(";")).join("\r\n");   // ; agar terbuka rapi di Excel Indonesia
+}
+
+function downloadCsv() {
+    if (!S.logs.length) return;
+    downloadBlob(new Blob([buildCsv(S.logs)], { type: "text/csv;charset=utf-8" }), reportBaseName() + ".csv");
+}
+
+function loadScript(url) {
+    return new Promise((ok, fail) => {
+        const s = document.createElement("script");
+        s.src = url; s.onload = ok; s.onerror = () => fail(new Error("Gagal memuat " + url));
+        document.head.appendChild(s);
+    });
+}
+async function loadFirst(urls) {
+    let last;
+    for (const u of urls) { try { await loadScript(u); return; } catch (e) { last = e; } }
+    throw last;
+}
+let pdfLibPromise = null;
+function ensurePdfLibs() {   // dimuat HANYA saat tombol PDF ditekan -> halaman utama tetap ringan
+    if (!pdfLibPromise) {
+        pdfLibPromise = (async () => {
+            if (!(window.jspdf && window.jspdf.jsPDF)) await loadFirst(PDF_LIBS[0]);
+            if (!(window.jspdf.jsPDF.API && window.jspdf.jsPDF.API.autoTable)) await loadFirst(PDF_LIBS[1]);
+        })().catch(e => { pdfLibPromise = null; throw e; });
+    }
+    return pdfLibPromise;
+}
+
+function buildReportPdf(data) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    const PW = doc.internal.pageSize.getWidth();
+    const PH = doc.internal.pageSize.getHeight();
+    const M = 14, C = REPORT_CONFIG;
+    const GREEN = [6, 95, 70], LIGHT = [236, 253, 245], SLATE = [71, 85, 105], INK = [15, 23, 42];
+    const logs = data.logs;
+    const st = computeStats(logs);
+    const single = data.from === data.to;
+    const period = single ? fmtLong(data.from) : `${fmtLong(data.from)} s/d ${fmtLong(data.to)}`;
+    const partial = !!data.partial;
+    const cols = SHIFTS.concat(st.shift.Lainnya.n ? ["Lainnya"] : []);
+    let y = 0;
+
+    /* --- kop --- */
+    doc.setFillColor(...GREEN); doc.rect(0, 0, PW, 30, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.text(C.company.toUpperCase(), M, 9);
+    doc.setFontSize(16); doc.text(C.title, M, 18);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.text(C.department, M, 25);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(9);
+    doc.text(single ? fmtMid(data.from) : `${fmtMid(data.from)} - ${fmtMid(data.to)}`, PW - M, 25, { align: "right" });
+
+    /* --- info --- */
+    y = 38;
+    doc.setTextColor(...SLATE); doc.setFontSize(8.5);
+    const info = [
+        ["Periode", period + (single ? "" : ` (${diffDays(data.from, data.to) + 1} hari)`)],
+        ["Hari operasional", `pukul ${pad2(data.dayStartHour)}.00 s/d ${pad2((data.dayStartHour + 23) % 24)}.59 keesokan harinya`],
+        ["Dicetak", new Date().toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" })]
+    ];
+    info.forEach(([k, v]) => {
+        doc.setFont("helvetica", "bold"); doc.text(k, M, y);
+        doc.setFont("helvetica", "normal"); doc.text(": " + v, M + 32, y);
+        y += 5;
+    });
+    if (partial) {
+        doc.setTextColor(180, 83, 9); doc.setFont("helvetica", "bold");
+        doc.text("Catatan: data sementara, hari operasional masih berjalan.", M, y); y += 5;
+    }
+    y += 2;
+
+    /* --- kotak ringkasan --- */
+    const akPdf = computeAktualDiproses(data.batches || []);
+    const bw = (PW - 2 * M - 4 * 3) / 5;
+    const kpis = [
+        ["TOTAL TONASE (DISTRIBUSI)", nf(st.kg) + " kg"],
+        ["TOTAL AKTUAL DIPROSES", akPdf.n ? nf(akPdf.kg) + " kg" : "-"],
+        ["PEN TERDISTRIBUSI", nf(st.rows)],
+        ["BATCH MIXING", nf(st.batches.size)],
+        ["RATA-RATA MIXING", st.avgSec ? fmtDur(st.avgSec) : "-"]
+    ];
+    kpis.forEach((k, i) => {
+        const x = M + i * (bw + 3);
+        doc.setFillColor(...LIGHT); doc.setDrawColor(167, 243, 208);
+        doc.roundedRect(x, y, bw, 19, 2, 2, "FD");
+        doc.setTextColor(...SLATE); doc.setFont("helvetica", "bold"); doc.setFontSize(6.5);
+        doc.text(k[0], x + 3, y + 6);
+        doc.setTextColor(...GREEN); doc.setFontSize(13);
+        doc.text(k[1], x + 3, y + 14.5);
+    });
+    y += 24;
+    if (st.durBatches) {
+        doc.setTextColor(...SLATE); doc.setFont("helvetica", "normal"); doc.setFontSize(8.5);
+        const pctAll = Math.round(st.sopOk / st.durBatches * 100);
+        doc.text(`Kepatuhan SOP mixing (${sopText()}): ${st.sopOk} dari ${st.durBatches} batch sesuai SOP (${pctAll}%)` +
+            (st.sopSlow || st.sopFast ? `; ${st.sopSlow} lebih dari ${fmtDur(SOP_MAX_SEC)}, ${st.sopFast} kurang dari ${fmtDur(SOP_MIN_SEC)}.` : "."), M, y);
+        y += 7;
+    }
+
+    const title = t => {
+        if (y > PH - 50) { doc.addPage(); y = 18; }
+        doc.setTextColor(...GREEN); doc.setFont("helvetica", "bold"); doc.setFontSize(10.5);
+        doc.text(t, M, y);
+        doc.setDrawColor(...GREEN); doc.setLineWidth(0.4); doc.line(M, y + 1.6, PW - M, y + 1.6);
+        y += 5;
+    };
+    const table = o => {
+        // baris Total mengikuti perataan kolomnya (angka rata kanan)
+        const userParse = o.didParseCell;
+        o.didParseCell = h => {
+            const cs = (o.columnStyles || {})[h.column.index];
+            if (h.section === "foot" && cs && cs.halign) h.cell.styles.halign = cs.halign;
+            if (userParse) userParse(h);
+        };
+        doc.autoTable(Object.assign({
+            startY: y, theme: "grid", margin: { left: M, right: M, bottom: 18 }, showFoot: "lastPage",
+            styles: { fontSize: 8.5, cellPadding: 1.7, lineColor: [203, 213, 225], lineWidth: 0.1, textColor: INK },
+            headStyles: { fillColor: GREEN, textColor: 255, fontStyle: "bold", halign: "center" },
+            footStyles: { fillColor: LIGHT, textColor: [6, 78, 59], fontStyle: "bold" },
+            alternateRowStyles: { fillColor: [248, 250, 252] }
+        }, o));
+        y = doc.lastAutoTable.finalY + 7;
+    };
+
+    /* --- rekap shift --- */
+    title("Rekap per Shift");
+    table({
+        head: [["Shift", "Jumlah Pen", "Tonase (kg)", "Porsi"]],
+        body: cols.map(c => [SHIFT_LABEL[c] || c, nf(st.shift[c].n), nf(st.shift[c].kg), (st.kg ? Math.round(st.shift[c].kg / st.kg * 100) : 0) + "%"]),
+        foot: [["Total", nf(st.rows), nf(st.kg), "100%"]],
+        columnStyles: { 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" } }
+    });
+
+    /* --- rekap harian --- */
+    const dayKeys = Object.keys(st.days).sort();
+    if (!single && dayKeys.length > 1) {
+        title("Rekap Harian (kg)");
+        const dcs = {}; for (let i = 1; i <= cols.length + 2; i++) dcs[i] = { halign: "right" };
+        table({
+            head: [["Tanggal"].concat(cols, ["Total", "Pen"])],
+            body: dayKeys.map(k => [fmtMid(k)].concat(cols.map(c => st.days[k][c] ? nf(st.days[k][c]) : "-"), [nf(st.days[k].total), nf(st.days[k].n)])),
+            foot: [["Total"].concat(cols.map(c => nf(st.shift[c].kg)), [nf(st.kg), nf(st.rows)])],
+            columnStyles: dcs
+        });
+    }
+
+    /* --- rekap pen --- */
+    title("Rekap per Pen (kg)");
+    const pcs = {}; for (let i = 1; i <= cols.length + 2; i++) pcs[i] = { halign: "right" };
+    const pens = Object.entries(st.pens).sort((a, b) => b[1].total - a[1].total);
+    table({
+        head: [["Pen"].concat(cols, ["Total", "Distribusi"])],
+        body: pens.map(([n, v]) => [n].concat(cols.map(c => v[c] ? nf(v[c]) : "-"), [nf(v.total), nf(v.n) + "x"])),
+        foot: [["Total"].concat(cols.map(c => nf(st.shift[c].kg)), [nf(st.kg), nf(st.rows) + "x"])],
+        columnStyles: pcs
+    });
+
+    /* --- rapor operator (ringkas) --- */
+    title(`Rapor Kepatuhan SOP per Operator Mixer (SOP ${sopText()})`);
+    const opList = raporOrder(st);
+    const rcs = {}; for (let i = 1; i <= 8; i++) rcs[i] = { halign: "right" };
+    rcs[9] = { halign: "center" };
+    table({
+        head: [["Operator", "Pen", "Tonase (kg)", "Batch", "Sesuai", "< " + fmtDur(SOP_MIN_SEC), "> " + fmtDur(SOP_MAX_SEC), "Kepatuhan", "Rata-rata", "Predikat"]],
+        body: opList.map(([n, o]) => {
+            const r = o.rapor;
+            return [n, nf(o.n), nf(o.kg), r.total || "-", r.total ? r.ok : "-", r.total ? r.fast : "-", r.total ? r.slow : "-",
+                    r.total ? Math.round(r.pct) + "%" : "-", r.total ? fmtDur(r.avgSec) : "-", r.grade ? r.grade.label : "Belum ada data"];
+        }),
+        styles: { fontSize: 7.5, cellPadding: 1.5, lineColor: [203, 213, 225], lineWidth: 0.1, textColor: INK },
+        columnStyles: Object.assign(rcs, { 9: { halign: "center", cellWidth: 27 } }),
+        didParseCell: h => {
+            if (h.section === "body" && h.column.index === 9) {
+                const g = opList[h.row.index][1].rapor.grade;
+                if (g) { h.cell.styles.textColor = TONE[g.tone].rgb; h.cell.styles.fontStyle = "bold"; }
+            }
+        }
+    });
+
+    /* --- rapor akurasi penimbangan loader (ringkas) --- */
+    const lsAll = computeLoaderStats(data.batches || []);
+    const lsList = loaderOrder(lsAll).filter(([, o]) => o.rapor.total > 0);
+    if (lsList.length) {
+        title(`Rapor Akurasi Penimbangan Operator Loader (toleransi +/-${WEIGH_OK_PCT}%)`);
+        const lcs = {}; for (let i = 1; i <= 7; i++) lcs[i] = { halign: "right" };
+        lcs[8] = { halign: "center", cellWidth: 27 };
+        const pctOf = (x) => { const t = x.n + x.empty; return t ? Math.round(x.ok / t * 100) + "%" : "-"; };
+        const avgOf = (x) => x.n ? (x.sumAbs / x.n).toFixed(1).replace(".", ",") + "%" : "-";
+        table({
+            head: [["Operator Loader", "Batch", "Akurat", "Akurasi", "Jagung akurat", "Konsentrat akurat", "Simpangan Jagung", "Simpangan Konsentrat", "Predikat"]],
+            body: lsList.map(([n, o]) => { const r = o.rapor; return [n, r.total, r.akurat, Math.round(r.pct) + "%", pctOf(r.items.jagung), pctOf(r.items.konsentrat), avgOf(r.items.jagung), avgOf(r.items.konsentrat), r.grade.label]; }),
+            styles: { fontSize: 7.5, cellPadding: 1.5, lineColor: [203, 213, 225], lineWidth: 0.1, textColor: INK },
+            columnStyles: lcs,
+            didParseCell: h => {
+                if (h.section === "body" && h.column.index === 8) {
+                    h.cell.styles.textColor = TONE[lsList[h.row.index][1].rapor.grade.tone].rgb; h.cell.styles.fontStyle = "bold";
+                }
+            }
+        });
+    }
+
+    /* --- rekap helper (akurasi molases + pendampingan) --- */
+    const hsAll = computeHelperStats(data.batches || [], logs);
+    const hList = helperOrder(hsAll);
+    if (hList.length) {
+        title(`Rapor Helper (akurasi molases, toleransi +/-${MOL_OK_PCT}%, dan pendampingan distribusi)`);
+        const hcs = {}; for (let i = 1; i <= 6; i++) hcs[i] = { halign: "right" };
+        hcs[4] = { halign: "center" };
+        table({
+            head: [["Helper", "Batch molases", "Molases aktual (kg)", "Target (kg)", "Akurasi", "Pen didampingi", "Tonase distribusi (kg)"]],
+            body: hList.map(h => { const v = h.mol.ev; return [h.name, h.mol.n, nf(h.mol.kg), v.total ? nf(v.tgtKg) : "-", v.total ? Math.round(h.mol.pct) + "%" : "-", h.dist.pens, nf(h.dist.kg)]; }),
+            styles: { fontSize: 8, cellPadding: 1.6, lineColor: [203, 213, 225], lineWidth: 0.1, textColor: INK },
+            columnStyles: hcs
+        });
+    }
+
+    /* --- rekap unit mixer --- */
+    const msAll = computeMixerStats(data.batches || [], logs);
+    const uList = mixerOrder(msAll);
+    if (uList.length) {
+        title("Rapor Unit Mixer (riwayat muatan)");
+        const ucs = {}; for (let i = 1; i <= 6; i++) ucs[i] = { halign: "right" };
+        table({
+            head: [["Unit", "Batch", "Rata-rata muatan (kg)", "Terbesar (kg)", "Total muatan (kg)", "Rata-rata mixing", "Sesuai SOP"]],
+            body: uList.map(u => [u.name, u.n, u.nLoad ? nf(u.avg) : "-", u.max ? nf(u.max) : "-", nf(u.sum), u.dur.n ? fmtDur(u.dur.sum / u.dur.n) : "-", u.dur.n ? Math.round(u.dur.ok / u.dur.n * 100) + "%" : "-"]),
+            styles: { fontSize: 8, cellPadding: 1.6, lineColor: [203, 213, 225], lineWidth: 0.1, textColor: INK },
+            columnStyles: ucs
+        });
+    }
+
+    /* --- detail per hari & shift --- */
+    const byDay = {};
+    logs.forEach(l => { (byDay[l.day || "-"] = byDay[l.day || "-"] || []).push(l); });
+    Object.keys(byDay).sort().forEach(dk => {
+        cols.forEach(c => {
+            const list = byDay[dk].filter(l => (c === "Lainnya" ? !SHIFTS.includes(l.shift) : l.shift === c))
+                .sort((a, b) => (a.waktu < b.waktu ? -1 : 1));
+            if (!list.length) return;
+            const sub = list.reduce((a, b) => a + b.tonase, 0);
+            title(`Detail Distribusi - ${dk === "-" ? "" : fmtLong(dk) + " - "}${SHIFT_LABEL[c] || c}`);
+            table({
+                head: [["No", "Jam", "Pen", "Operator Mixer", "Tonase (kg)", "Durasi Mixing"]],
+                body: list.map((l, i) => [i + 1, timeLabel(l, false), l.pen, l.operator, nf(l.tonase), l.durasi || "-"]),
+                foot: [["", "", "Subtotal " + (SHIFT_LABEL[c] || c), `${list.length} pen`, nf(sub), ""]],
+                columnStyles: { 0: { halign: "center", cellWidth: 10 }, 1: { halign: "center", cellWidth: 22 }, 4: { halign: "right", cellWidth: 26 }, 5: { halign: "center", cellWidth: 26 } },
+                didParseCell: h => {
+                    if (h.section === "body" && h.column.index === 5) {
+                        const stt = sopStatus(durToSec(h.cell.raw));
+                        if (stt === "slow") { h.cell.styles.textColor = [185, 28, 28]; h.cell.styles.fontStyle = "bold"; }
+                        else if (stt === "fast") { h.cell.styles.textColor = [194, 65, 12]; h.cell.styles.fontStyle = "bold"; }
+                    }
+                }
+            });
+        });
+    });
+    if (st.sopSlow || st.sopFast) {
+        if (y > PH - 24) { doc.addPage(); y = 18; }
+        doc.setTextColor(185, 28, 28); doc.setFont("helvetica", "italic"); doc.setFontSize(7.5);
+        doc.text(`Durasi merah = lebih dari ${fmtDur(SOP_MAX_SEC)}; oranye = kurang dari ${fmtDur(SOP_MIN_SEC)} (di luar SOP mixing ${sopText()}).`, M, y - 3);
+    }
+
+    /* --- tanda tangan --- */
+    if (y > PH - 55) { doc.addPage(); y = 20; }
+    y += 6;
+    const colW = (PW - 2 * M) / 2;
+    [[C.preparedRole, C.preparedName, "Dibuat oleh,"], [C.approvedRole, C.approvedName, "Mengetahui,"]].forEach((s, i) => {
+        const cx = M + i * colW + colW / 2;
+        doc.setTextColor(...INK); doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+        doc.text(s[2], cx, y, { align: "center" });
+        doc.setDrawColor(...SLATE); doc.setLineWidth(0.3); doc.line(cx - 30, y + 24, cx + 30, y + 24);
+        doc.setFont("helvetica", "bold"); doc.text(s[1] || " ", cx, y + 29, { align: "center" });
+        doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...SLATE);
+        doc.text(s[0], cx, y + 33.5, { align: "center" });
+    });
+
+    /* --- footer semua halaman --- */
+    const n = doc.getNumberOfPages();
+    for (let i = 1; i <= n; i++) {
+        doc.setPage(i);
+        doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.2); doc.line(M, PH - 12, PW - M, PH - 12);
+        doc.setTextColor(...SLATE); doc.setFont("helvetica", "normal"); doc.setFontSize(7.5);
+        doc.text(`${C.title} - ${C.company}`, M, PH - 7.5);
+        doc.text(`Halaman ${i} dari ${n}`, PW - M, PH - 7.5, { align: "right" });
+    }
+    return doc;
+}
+
+/** PDF rapor: satu halaman (atau lebih jika banyak pelanggaran) untuk SETIAP operator. */
+function buildRaporPdf(data, onlyName) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    const PW = doc.internal.pageSize.getWidth(), PH = doc.internal.pageSize.getHeight();
+    const M = 14, C = REPORT_CONFIG;
+    const GREEN = [6, 95, 70], LIGHT = [236, 253, 245], SLATE = [71, 85, 105], INK = [15, 23, 42];
+    const st = computeStats(data.logs);
+    const single = data.from === data.to;
+    const period = single ? fmtLong(data.from) : `${fmtLong(data.from)} s/d ${fmtLong(data.to)}`;
+    let names = raporOrder(st).map(x => x[0]);
+    if (onlyName) names = names.filter(n => n === onlyName);
+    let y = 0;
+
+    const title = t => {
+        if (y > PH - 50) { doc.addPage(); y = 18; }
+        doc.setTextColor(...GREEN); doc.setFont("helvetica", "bold"); doc.setFontSize(10.5);
+        doc.text(t, M, y);
+        doc.setDrawColor(...GREEN); doc.setLineWidth(0.4); doc.line(M, y + 1.6, PW - M, y + 1.6);
+        y += 5;
+    };
+    const table = o => {
+        const userParse = o.didParseCell;
+        o.didParseCell = h => {
+            const cs = (o.columnStyles || {})[h.column.index];
+            if (h.section === "foot" && cs && cs.halign) h.cell.styles.halign = cs.halign;
+            if (userParse) userParse(h);
+        };
+        doc.autoTable(Object.assign({
+            startY: y, theme: "grid", margin: { left: M, right: M, bottom: 18 }, showFoot: "lastPage",
+            styles: { fontSize: 8.5, cellPadding: 1.7, lineColor: [203, 213, 225], lineWidth: 0.1, textColor: INK },
+            headStyles: { fillColor: GREEN, textColor: 255, fontStyle: "bold", halign: "center" },
+            footStyles: { fillColor: LIGHT, textColor: [6, 78, 59], fontStyle: "bold" },
+            alternateRowStyles: { fillColor: [248, 250, 252] }
+        }, o));
+        y = doc.lastAutoTable.finalY + 7;
+    };
+
+    names.forEach((name, idx) => {
+        if (idx > 0) doc.addPage();
+        const o = st.ops[name], r = o.rapor, g = r.grade;
+
+        /* kop */
+        doc.setFillColor(...GREEN); doc.rect(0, 0, PW, 30, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.text(C.company.toUpperCase(), M, 9);
+        doc.setFontSize(16); doc.text("RAPOR OPERATOR MIXER", M, 18);
+        doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.text(C.department + " - Kepatuhan SOP Mixing", M, 25);
+        doc.setFont("helvetica", "bold");
+        doc.text(single ? fmtMid(data.from) : `${fmtMid(data.from)} - ${fmtMid(data.to)}`, PW - M, 25, { align: "right" });
+
+        /* identitas */
+        y = 41;
+        doc.setTextColor(...INK); doc.setFont("helvetica", "bold"); doc.setFontSize(15);
+        doc.text(name, M, y);
+        if (g) {
+            const col = TONE[g.tone].rgb, label = g.label.toUpperCase();
+            doc.setFontSize(9);
+            const bw = doc.getTextWidth(label) + 10;
+            doc.setDrawColor(...col); doc.setFillColor(255, 255, 255); doc.setLineWidth(0.6);
+            doc.roundedRect(PW - M - bw, y - 6, bw, 9, 2, 2, "S");
+            doc.setTextColor(...col); doc.text(label, PW - M - bw / 2, y - 0.2, { align: "center" });
+        }
+        y += 7;
+        doc.setTextColor(...SLATE); doc.setFontSize(8.5);
+        [["Periode", period + (single ? "" : ` (${diffDays(data.from, data.to) + 1} hari)`)],
+         ["Standar SOP", `mixing ${sopText()} menit`],
+         ["Dasar penilaian", "durasi mixing per batch (start mixing di Loader s/d stop di Mixer)"],
+         ["Dicetak", new Date().toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" })]
+        ].forEach(([k, v]) => {
+            doc.setFont("helvetica", "bold"); doc.text(k, M, y);
+            doc.setFont("helvetica", "normal"); doc.text(": " + v, M + 32, y);
+            y += 5;
+        });
+        if (data.partial) {
+            doc.setTextColor(180, 83, 9); doc.setFont("helvetica", "bold");
+            doc.text("Catatan: data sementara, hari operasional masih berjalan.", M, y); y += 5;
+        }
+        y += 2;
+
+        /* kotak ringkasan */
+        const bw2 = (PW - 2 * M - 9) / 4;
+        [["KEPATUHAN SOP", r.total ? Math.round(r.pct) + "%" : "-", g ? TONE[g.tone].rgb : GREEN],
+         ["BATCH DINILAI", String(r.total), GREEN],
+         ["RATA-RATA MIXING", r.total ? fmtDur(r.avgSec) : "-", GREEN],
+         ["TOTAL TONASE", nf(o.kg) + " kg", GREEN]
+        ].forEach((k, i) => {
+            const x = M + i * (bw2 + 3);
+            doc.setFillColor(...LIGHT); doc.setDrawColor(167, 243, 208); doc.setLineWidth(0.2);
+            doc.roundedRect(x, y, bw2, 19, 2, 2, "FD");
+            doc.setTextColor(...SLATE); doc.setFont("helvetica", "bold"); doc.setFontSize(6.5);
+            doc.text(k[0], x + 3, y + 6);
+            doc.setTextColor(...k[2]); doc.setFontSize(13);
+            doc.text(k[1], x + 3, y + 14.5);
+        });
+        y += 25;
+
+        if (!r.total) {
+            doc.setTextColor(...SLATE); doc.setFont("helvetica", "italic"); doc.setFontSize(9);
+            doc.text("Belum ada data durasi mixing untuk dinilai pada periode ini.", M, y);
+            y += 10;
+        } else {
+            title("Rincian Kepatuhan SOP");
+            const pc = n => Math.round(n / r.total * 100) + "%";
+            table({
+                head: [["Kategori", "Jumlah Batch", "Porsi"]],
+                body: [[`Sesuai SOP (${sopText()})`, r.ok, pc(r.ok)],
+                       [`Terlalu cepat (kurang dari ${fmtDur(SOP_MIN_SEC)})`, r.fast, pc(r.fast)],
+                       [`Terlalu lama (lebih dari ${fmtDur(SOP_MAX_SEC)})`, r.slow, pc(r.slow)]],
+                foot: [["Total batch dinilai", r.total, "100%"]],
+                columnStyles: { 1: { halign: "right" }, 2: { halign: "right" } },
+                didParseCell: h => {
+                    if (h.section === "body" && h.column.index === 0) {
+                        h.cell.styles.textColor = h.row.index === 0 ? TONE.ok.rgb : h.row.index === 1 ? [194, 65, 12] : TONE.bad.rgb;
+                        h.cell.styles.fontStyle = "bold";
+                    }
+                }
+            });
+            doc.setTextColor(...SLATE); doc.setFont("helvetica", "normal"); doc.setFontSize(8.5);
+            doc.text(`Durasi tercepat ${fmtDur(r.minSec)}  |  terlama ${fmtDur(r.maxSec)}  |  rata-rata ${fmtDur(r.avgSec)}`, M, y - 3);
+            y += 4;
+
+            const dayKeys = Object.keys(r.days).sort();
+            if (!single && dayKeys.length > 1) {
+                title("Kepatuhan per Hari");
+                table({
+                    head: [["Tanggal", "Batch", "Sesuai SOP", "Kepatuhan"]],
+                    body: dayKeys.map(k => [fmtMid(k), r.days[k].total, r.days[k].ok, Math.round(r.days[k].ok / r.days[k].total * 100) + "%"]),
+                    columnStyles: { 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" } }
+                });
+            }
+
+            title("Batch di Luar SOP");
+            if (!r.viol.length) {
+                doc.setTextColor(...TONE.ok.rgb); doc.setFont("helvetica", "bold"); doc.setFontSize(9);
+                doc.text("Tidak ada batch di luar SOP pada periode ini. Pertahankan kinerja.", M, y + 1);
+                y += 10;
+            } else {
+                table({
+                    head: [["No", "Tanggal", "Jam", "Shift", "Pen", "Durasi", "Keterangan"]],
+                    body: r.viol.map((b, i) => [i + 1, fmtMid(b.day), b.jam, b.shift, b.pens.join(", "), fmtDur(b.sec), b.status === "slow" ? "Terlalu lama" : "Terlalu cepat"]),
+                    columnStyles: { 0: { halign: "center", cellWidth: 10 }, 1: { cellWidth: 26 }, 2: { halign: "center", cellWidth: 14 }, 3: { cellWidth: 16 }, 5: { halign: "center", cellWidth: 16 }, 6: { cellWidth: 26 } },
+                    didParseCell: h => {
+                        if (h.section === "body" && (h.column.index === 5 || h.column.index === 6)) {
+                            h.cell.styles.textColor = r.viol[h.row.index].status === "slow" ? TONE.bad.rgb : [194, 65, 12];
+                            h.cell.styles.fontStyle = "bold";
+                        }
+                    }
+                });
+            }
+        }
+
+        /* catatan & tanda tangan */
+        if (y > PH - 68) { doc.addPage(); y = 20; }
+        doc.setTextColor(...GREEN); doc.setFont("helvetica", "bold"); doc.setFontSize(10.5);
+        doc.text("Catatan Pembinaan", M, y);
+        doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.2);
+        for (let i = 1; i <= 3; i++) doc.line(M, y + i * 7, PW - M, y + i * 7);
+        y += 30;
+        const colW = (PW - 2 * M) / 2;
+        [["Operator,", name, "Operator Mixer"], ["Supervisor,", C.preparedName, C.preparedRole]].forEach((sg, i) => {
+            const cx = M + i * colW + colW / 2;
+            doc.setTextColor(...INK); doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+            doc.text(sg[0], cx, y, { align: "center" });
+            doc.setDrawColor(...SLATE); doc.setLineWidth(0.3); doc.line(cx - 30, y + 20, cx + 30, y + 20);
+            doc.setFont("helvetica", "bold"); doc.text(sg[1] || " ", cx, y + 25, { align: "center" });
+            doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...SLATE);
+            doc.text(sg[2], cx, y + 29.5, { align: "center" });
+        });
+    });
+
+    const n = doc.getNumberOfPages();
+    for (let i = 1; i <= n; i++) {
+        doc.setPage(i);
+        doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.2); doc.line(M, PH - 12, PW - M, PH - 12);
+        doc.setTextColor(...SLATE); doc.setFont("helvetica", "normal"); doc.setFontSize(7.5);
+        doc.text(`Rapor Operator Mixer - ${C.company}`, M, PH - 7.5);
+        doc.text(`Halaman ${i} dari ${n}`, PW - M, PH - 7.5, { align: "right" });
+    }
+    return doc;
+}
+
+/** Perangkat kecil untuk PDF rapor (kop, identitas, kotak ringkasan, tabel, tanda tangan, footer). */
+function pdfKit(doc) {
+    const K = {
+        M: 14, y: 0,
+        PW: doc.internal.pageSize.getWidth(), PH: doc.internal.pageSize.getHeight(),
+        GREEN: [6, 95, 70], LIGHT: [236, 253, 245], SLATE: [71, 85, 105], INK: [15, 23, 42]
+    };
+    K.kop = (title, sub, right) => {
+        doc.setFillColor(...K.GREEN); doc.rect(0, 0, K.PW, 30, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.text(REPORT_CONFIG.company.toUpperCase(), K.M, 9);
+        doc.setFontSize(16); doc.text(title, K.M, 18);
+        doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.text(sub, K.M, 25);
+        doc.setFont("helvetica", "bold"); doc.text(right, K.PW - K.M, 25, { align: "right" });
+    };
+    K.identity = (name, grade) => {
+        K.y = 41;
+        doc.setTextColor(...K.INK); doc.setFont("helvetica", "bold"); doc.setFontSize(15);
+        doc.text(name, K.M, K.y);
+        if (grade) {
+            const col = TONE[grade.tone].rgb, label = grade.label.toUpperCase();
+            doc.setFontSize(9);
+            const bw = doc.getTextWidth(label) + 10;
+            doc.setDrawColor(...col); doc.setFillColor(255, 255, 255); doc.setLineWidth(0.6);
+            doc.roundedRect(K.PW - K.M - bw, K.y - 6, bw, 9, 2, 2, "S");
+            doc.setTextColor(...col); doc.text(label, K.PW - K.M - bw / 2, K.y - 0.2, { align: "center" });
+        }
+        K.y += 7;
+    };
+    K.info = rows => {
+        doc.setTextColor(...K.SLATE); doc.setFontSize(8.5);
+        rows.forEach(([k, v]) => {
+            doc.setFont("helvetica", "bold"); doc.text(k, K.M, K.y);
+            doc.setFont("helvetica", "normal");
+            const lines = doc.splitTextToSize(": " + v, K.PW - 2 * K.M - 32);
+            doc.text(lines, K.M + 32, K.y);
+            K.y += 5 * lines.length;
+        });
+        K.y += 2;
+    };
+    K.kpis = list => {
+        const bw = (K.PW - 2 * K.M - 9) / 4;
+        list.forEach((k, i) => {
+            const x = K.M + i * (bw + 3);
+            doc.setFillColor(...K.LIGHT); doc.setDrawColor(167, 243, 208); doc.setLineWidth(0.2);
+            doc.roundedRect(x, K.y, bw, 19, 2, 2, "FD");
+            doc.setTextColor(...K.SLATE); doc.setFont("helvetica", "bold"); doc.setFontSize(6.5);
+            doc.text(k[0], x + 3, K.y + 6);
+            doc.setTextColor(...(k[2] || K.GREEN)); doc.setFontSize(13);
+            doc.text(k[1], x + 3, K.y + 14.5);
+        });
+        K.y += 25;
+    };
+    K.title = t => {
+        if (K.y > K.PH - 50) { doc.addPage(); K.y = 18; }
+        doc.setTextColor(...K.GREEN); doc.setFont("helvetica", "bold"); doc.setFontSize(10.5);
+        doc.text(t, K.M, K.y);
+        doc.setDrawColor(...K.GREEN); doc.setLineWidth(0.4); doc.line(K.M, K.y + 1.6, K.PW - K.M, K.y + 1.6);
+        K.y += 5;
+    };
+    K.table = o => {
+        const userParse = o.didParseCell;
+        o.didParseCell = h => {
+            const cs = (o.columnStyles || {})[h.column.index];
+            if (h.section === "foot" && cs && cs.halign) h.cell.styles.halign = cs.halign;
+            if (userParse) userParse(h);
+        };
+        doc.autoTable(Object.assign({
+            startY: K.y, theme: "grid", margin: { left: K.M, right: K.M, bottom: 18 }, showFoot: "lastPage",
+            styles: { fontSize: 8.5, cellPadding: 1.7, lineColor: [203, 213, 225], lineWidth: 0.1, textColor: K.INK },
+            headStyles: { fillColor: K.GREEN, textColor: 255, fontStyle: "bold", halign: "center" },
+            footStyles: { fillColor: K.LIGHT, textColor: [6, 78, 59], fontStyle: "bold" },
+            alternateRowStyles: { fillColor: [248, 250, 252] }
+        }, o));
+        K.y = doc.lastAutoTable.finalY + 7;
+    };
+    K.text = (str, rgb, style) => {
+        doc.setTextColor(...(rgb || K.SLATE)); doc.setFont("helvetica", style || "normal"); doc.setFontSize(8.5);
+        const lines = doc.splitTextToSize(str, K.PW - 2 * K.M);
+        doc.text(lines, K.M, K.y);
+        K.y += 4.5 * lines.length + 3;
+    };
+    K.closing = (left, right, opts) => {   // left/right = [caption, nama, jabatan]; opts.notes=false: tanpa kolom catatan pembinaan
+        const notes = !(opts && opts.notes === false);
+        if (K.y > K.PH - (notes ? 68 : 46)) { doc.addPage(); K.y = 20; }
+        if (notes) {
+            doc.setTextColor(...K.GREEN); doc.setFont("helvetica", "bold"); doc.setFontSize(10.5);
+            doc.text("Catatan Pembinaan", K.M, K.y);
+            doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.2);
+            for (let i = 1; i <= 3; i++) doc.line(K.M, K.y + i * 7, K.PW - K.M, K.y + i * 7);
+            K.y += 30;
+        } else {
+            K.y += 4;
+        }
+        const colW = (K.PW - 2 * K.M) / 2;
+        [left, right].forEach((sg, i) => {
+            const cx = K.M + i * colW + colW / 2;
+            doc.setTextColor(...K.INK); doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+            doc.text(sg[0], cx, K.y, { align: "center" });
+            doc.setDrawColor(...K.SLATE); doc.setLineWidth(0.3); doc.line(cx - 30, K.y + 20, cx + 30, K.y + 20);
+            doc.setFont("helvetica", "bold"); doc.text(sg[1] || " ", cx, K.y + 25, { align: "center" });
+            doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...K.SLATE);
+            doc.text(sg[2], cx, K.y + 29.5, { align: "center" });
+        });
+    };
+    K.footer = label => {
+        const n = doc.getNumberOfPages();
+        for (let i = 1; i <= n; i++) {
+            doc.setPage(i);
+            doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.2); doc.line(K.M, K.PH - 12, K.PW - K.M, K.PH - 12);
+            doc.setTextColor(...K.SLATE); doc.setFont("helvetica", "normal"); doc.setFontSize(7.5);
+            doc.text(`${label} - ${REPORT_CONFIG.company}`, K.M, K.PH - 7.5);
+            doc.text(`Halaman ${i} dari ${n}`, K.PW - K.M, K.PH - 7.5, { align: "right" });
+        }
+    };
+    return K;
+}
+
+function periodInfo(data) {
+    const single = data.from === data.to;
+    return {
+        single,
+        long: single ? fmtLong(data.from) : `${fmtLong(data.from)} s/d ${fmtLong(data.to)} (${diffDays(data.from, data.to) + 1} hari)`,
+        short: single ? fmtMid(data.from) : `${fmtMid(data.from)} - ${fmtMid(data.to)}`,
+        printed: new Date().toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" })
+    };
+}
+
+/** PDF rapor operator LOADER: satu halaman per operator (akurasi penimbangan jagung & konsentrat). */
+function buildLoaderRaporPdf(data, onlyName) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    const K = pdfKit(doc), P = periodInfo(data), C = REPORT_CONFIG;
+    const ls = computeLoaderStats(data.batches || []);
+    let names = loaderOrder(ls).map(x => x[0]);
+    if (onlyName) names = names.filter(n => n === onlyName);
+    const pf = x => x.toFixed(1).replace(".", ",");
+
+    names.forEach((name, idx) => {
+        if (idx > 0) doc.addPage();
+        const o = ls[name], r = o.rapor, g = r.grade;
+        K.kop("RAPOR OPERATOR LOADER", C.department + " - Akurasi Penimbangan", P.short);
+        K.identity(name, g);
+        K.info([
+            ["Periode", P.long],
+            ["Standar", `selisih aktual vs target: akurat sampai ${WEIGH_OK_PCT}%, perlu cek ${WEIGH_OK_PCT}-${WEIGH_WARN_PCT}%, menyimpang lebih dari ${WEIGH_WARN_PCT}%`],
+            ["Dasar penilaian", "Tebon Jagung dan Konsentrat per batch. Target = snapshot saat batch disimpan di aplikasi Loader. Batch akurat = semua bahan yang dinilai akurat."],
+            ["Dicetak", P.printed]
+        ]);
+        if (data.partial) K.text("Catatan: data sementara, hari operasional masih berjalan.", [180, 83, 9], "bold");
+        if (r.noTarget) K.text(`${r.noTarget} batch tidak dinilai karena dicatat sebelum data target tersimpan.`, K.SLATE, "italic");
+
+        const it = r.items;
+        const itPct = x => { const t = x.n + x.empty; return t ? Math.round(x.ok / t * 100) + "%" : "-"; };
+        K.kpis([
+            ["AKURASI PENIMBANGAN", r.total ? Math.round(r.pct) + "%" : "-", g ? TONE[g.tone].rgb : K.GREEN],
+            ["BATCH DINILAI", String(r.total), K.GREEN],
+            ["AKURASI JAGUNG", itPct(it.jagung), K.GREEN],
+            ["AKURASI KONSENTRAT", itPct(it.konsentrat), K.GREEN]
+        ]);
+
+        if (!r.total) {
+            K.text("Belum ada batch dengan data target untuk dinilai pada periode ini.", K.SLATE, "italic");
+        } else {
+            K.title("Rincian per Bahan");
+            const cs = {}; for (let i = 1; i <= 8; i++) cs[i] = { halign: "right" };
+            K.table({
+                head: [["Bahan", "Batch dinilai", "Akurat", "Perlu cek", "Menyimpang", "Tidak diisi", "Simpangan rata-rata", "Kecenderungan", "Selisih total (kg)"]],
+                body: WEIGH_ITEMS.map(w => {
+                    const x = it[w.key], tot = x.n + x.empty;
+                    return [w.label, tot || "-", tot ? x.ok : "-", tot ? x.warn : "-", tot ? x.bad : "-", tot ? x.empty : "-",
+                            x.n ? pf(x.sumAbs / x.n) + "%" : "-", x.n ? signedPct(x.sumSigned / x.n) : "-", x.n ? signedKg(x.sumKg) : "-"];
+                }),
+                styles: { fontSize: 7.5, cellPadding: 1.5, lineColor: [203, 213, 225], lineWidth: 0.1, textColor: K.INK },
+                columnStyles: cs
+            });
+            K.text("Kecenderungan: tanda + berarti rata-rata penimbangan lebih dari target, tanda - berarti kurang dari target. Selisih total = jumlah (aktual - target) seluruh batch.");
+
+            const dayKeys = Object.keys(r.days).sort();
+            if (!P.single && dayKeys.length > 1) {
+                K.title("Akurasi per Hari");
+                K.table({
+                    head: [["Tanggal", "Batch", "Akurat", "Akurasi"]],
+                    body: dayKeys.map(k => [fmtMid(k), r.days[k].total, r.days[k].akurat, Math.round(r.days[k].akurat / r.days[k].total * 100) + "%"]),
+                    columnStyles: { 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" } }
+                });
+            }
+
+            K.title("Penimbangan di Luar Toleransi");
+            if (!r.viol.length) {
+                K.text("Semua penimbangan dalam toleransi pada periode ini. Pertahankan kinerja.", TONE.ok.rgb, "bold");
+            } else {
+                const rows = [], meta = [];
+                r.viol.forEach(v => v.items.forEach(e => {
+                    rows.push([rows.length + 1, fmtMid(v.batch.day), v.batch.jam, v.batch.shift, v.batch.pens, ITEM_LABEL[e.key], nf(e.t), e.status === "empty" ? "-" : nf(e.a),
+                               e.status === "empty" ? "Tidak diisi" : `${signedPct(e.pct)} (${signedKg(e.dev)})`]);
+                    meta.push(e.status);
+                }));
+                K.table({
+                    head: [["No", "Tanggal", "Jam", "Shift", "Pen", "Bahan", "Target", "Aktual", "Selisih"]],
+                    body: rows,
+                    styles: { fontSize: 7.5, cellPadding: 1.5, lineColor: [203, 213, 225], lineWidth: 0.1, textColor: K.INK },
+                    columnStyles: { 0: { halign: "center", cellWidth: 8 }, 1: { cellWidth: 24 }, 2: { halign: "center", cellWidth: 12 }, 3: { cellWidth: 13 }, 5: { cellWidth: 19 }, 6: { halign: "right", cellWidth: 14 }, 7: { halign: "right", cellWidth: 14 }, 8: { halign: "right", cellWidth: 33 } },
+                    didParseCell: h => {
+                        if (h.section === "body" && h.column.index === 8) {
+                            h.cell.styles.textColor = meta[h.row.index] === "warn" ? [194, 65, 12] : TONE.bad.rgb;
+                            h.cell.styles.fontStyle = "bold";
+                        }
+                    }
+                });
+            }
+        }
+        K.closing(["Operator,", name, "Operator Loader"], ["Supervisor,", C.preparedName, C.preparedRole]);
+    });
+    K.footer("Rapor Operator Loader");
+    return doc;
+}
+
+/** PDF rapor HELPER: akurasi penuangan molases + pendampingan distribusi. Satu halaman per helper. */
+function buildHelperRaporPdf(data, onlyName) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    const K = pdfKit(doc), P = periodInfo(data), C = REPORT_CONFIG;
+    const hs = computeHelperStats(data.batches || [], data.logs || []);
+    let list = helperOrder(hs);
+    if (onlyName) list = list.filter(h => h.name === onlyName);
+
+    list.forEach((h, idx) => {
+        if (idx > 0) doc.addPage();
+        const m = h.mol, v = m.ev, d = h.dist;
+        K.kop("RAPOR HELPER", C.department + " - Akurasi Molases & Pendampingan Distribusi", P.short);
+        K.identity(h.name, m.grade);
+        K.info([
+            ["Periode", P.long],
+            ["Standar molases", `selisih aktual vs target: akurat sampai ${MOL_OK_PCT}%, perlu cek ${MOL_OK_PCT}-${MOL_WARN_PCT}%, menyimpang lebih dari ${MOL_WARN_PCT}%`],
+            ["Dasar data", "Molases: Total KG di aplikasi Loader (helper dipilih di Loader) dibanding target molases dari MasterTonase yang tersimpan saat batch disimpan. Distribusi: helper dipilih di aplikasi Mixer."],
+            ["Dicetak", P.printed]
+        ]);
+        if (data.partial) K.text("Catatan: data sementara, hari operasional masih berjalan.", [180, 83, 9], "bold");
+        if (m.noTarget) K.text(`${m.noTarget} batch molases tidak dinilai karena belum punya data target.`, K.SLATE, "italic");
+        K.kpis([
+            ["AKURASI MOLASES", v.total ? Math.round(m.pct) + "%" : "-", m.grade ? TONE[m.grade.tone].rgb : K.GREEN],
+            ["BATCH MOLASES", String(m.n), K.GREEN],
+            ["AKTUAL / TARGET", v.total ? `${nf(v.aktKg)} / ${nf(v.tgtKg)} kg` : nf(m.kg) + " kg", K.GREEN],
+            ["PEN DIDAMPINGI", String(d.pens), K.GREEN]
+        ]);
+
+        K.title("Penuangan Molases");
+        if (!m.rows.length) {
+            K.text("Tidak ada catatan penuangan molases atas nama helper ini pada periode ini.", K.SLATE, "italic");
+        } else {
+            const selisih = x => x.status === null ? "-" : x.status === "empty" ? "Tidak tercatat" : `${signedPct(x.pct)} (${signedKg(x.dev)})`;
+            K.table({
+                head: [["No", "Tanggal", "Jam", "Shift", "Pen", "Target", "Aktual", "Selisih"]],
+                body: m.rows.map((x, i) => [i + 1, fmtMid(x.day), x.jam, x.shift, x.pens, x.tgt ? nf(x.tgt) : "-", x.kg > 0 ? nf(x.kg) : "0", selisih(x)]),
+                foot: v.total ? [["", "", "", "", "Total (yang dinilai)", nf(v.tgtKg), nf(v.aktKg), signedKg(v.sumKg)]] : undefined,
+                styles: { fontSize: 7.5, cellPadding: 1.5, lineColor: [203, 213, 225], lineWidth: 0.1, textColor: K.INK },
+                columnStyles: { 0: { halign: "center", cellWidth: 8 }, 1: { cellWidth: 23 }, 2: { halign: "center", cellWidth: 12 }, 3: { cellWidth: 13 }, 5: { halign: "right", cellWidth: 14 }, 6: { halign: "right", cellWidth: 14 }, 7: { halign: "right", cellWidth: 32 } },
+                didParseCell: hh => {
+                    if (hh.section === "body" && hh.column.index === 7) {
+                        const st = m.rows[hh.row.index].status;
+                        if (st === "warn") { hh.cell.styles.textColor = [194, 65, 12]; hh.cell.styles.fontStyle = "bold"; }
+                        else if (st === "bad" || st === "empty") { hh.cell.styles.textColor = TONE.bad.rgb; hh.cell.styles.fontStyle = "bold"; }
+                    }
+                }
+            });
+            if (v.n) K.text(`Kecenderungan: ${v.sumSigned > 0 ? "cenderung lebih dari target" : "cenderung kurang dari target"} (${signedPct(v.sumSigned / v.n)} rata-rata). Tanda + berarti molases lebih banyak dari target.`);
+        }
+
+        K.title("Pendampingan Distribusi per Shift");
+        if (!d.pens) {
+            K.text("Tidak ada catatan pendampingan distribusi atas nama helper ini pada periode ini.", K.SLATE, "italic");
+        } else {
+            K.table({
+                head: [["Shift", "Jumlah pen didampingi"]],
+                body: SHIFTS.concat(d.shift.Lainnya ? ["Lainnya"] : []).map(sh => [SHIFT_LABEL[sh] || sh, d.shift[sh]]),
+                foot: [["Total", `${d.pens} pen | ${d.batches.size} batch | ${nf(d.kg)} kg`]],
+                columnStyles: { 1: { halign: "right" } }
+            });
+            K.title("Bekerja Bersama Operator Mixer");
+            K.table({
+                head: [["Operator Mixer", "Jumlah pen", "Tonase (kg)"]],
+                body: Object.entries(d.ops).sort((a, b) => b[1].n - a[1].n).map(([n, x]) => [n, x.n, nf(x.kg)]),
+                columnStyles: { 1: { halign: "right" }, 2: { halign: "right" } }
+            });
+        }
+        K.closing(["Helper,", h.name, "Helper"], ["Supervisor,", C.preparedName, C.preparedRole]);
+    });
+    K.footer("Rapor Helper");
+    return doc;
+}
+
+/** PDF rapor UNIT MIXER (Trioliet / Supreme): riwayat muatan & kepatuhan SOP mixing. Satu halaman per unit. */
+function buildUnitRaporPdf(data, onlyName) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    const K = pdfKit(doc), P = periodInfo(data), C = REPORT_CONFIG;
+    const ms = computeMixerStats(data.batches || [], data.logs || []);
+    let list = mixerOrder(ms);
+    if (onlyName) list = list.filter(u => u.name === onlyName);
+
+    list.forEach((u, idx) => {
+        if (idx > 0) doc.addPage();
+        K.kop("RAPOR UNIT MIXER", C.department + " - Riwayat Muatan & Kinerja Unit", P.short);
+        K.identity(u.name, null);
+        K.info([
+            ["Periode", P.long],
+            ["Dasar data", "Muatan = Tonase Akhir tiap batch (setelah molases) yang dicatat di aplikasi Loader. Unit mixer dipilih operator loader saat menyimpan batch."],
+            ["Kapasitas acuan", u.cap ? `${nf(u.cap)} kg per batch` : "belum diisi (MIXER_CAPACITY_KG), utilisasi tidak dihitung"],
+            ["Dicetak", P.printed]
+        ]);
+        if (data.partial) K.text("Catatan: data sementara, hari operasional masih berjalan.", [180, 83, 9], "bold");
+        const sopPct = u.dur.n ? u.dur.ok / u.dur.n * 100 : null;
+        K.kpis([
+            ["JUMLAH BATCH", String(u.n), K.GREEN],
+            ["RATA-RATA MUATAN", u.nLoad ? nf(u.avg) + " kg" : "-", K.GREEN],
+            ["MUATAN TERBESAR", u.max ? nf(u.max) + " kg" : "-", K.GREEN],
+            [u.cap ? "UTILISASI RATA-RATA" : "SESUAI SOP MIXING", u.cap ? (u.util === null ? "-" : Math.round(u.util) + "%") : (sopPct === null ? "-" : Math.round(sopPct) + "%"), K.GREEN]
+        ]);
+
+        const dayKeys = Object.keys(u.days).sort();
+        K.title("Riwayat Muatan per Hari");
+        const dcs = {}; for (let i = 1; i <= 5; i++) dcs[i] = { halign: "right" };
+        K.table({
+            head: [["Tanggal", "Batch", "Rata-rata (kg)", "Terkecil (kg)", "Terbesar (kg)", "Total (kg)"]],
+            body: dayKeys.map(k => { const x = u.days[k]; return [fmtMid(k), x.n, x.nLoad ? nf(x.sum / x.nLoad) : "-", x.min ? nf(x.min) : "-", x.max ? nf(x.max) : "-", nf(x.sum)]; }),
+            foot: [["Total", u.n, u.nLoad ? nf(u.avg) : "-", u.min ? nf(u.min) : "-", u.max ? nf(u.max) : "-", nf(u.sum)]],
+            columnStyles: dcs
+        });
+        if (u.cap) K.text(`Kapasitas acuan ${nf(u.cap)} kg: ${u.over} batch melebihi kapasitas; utilisasi rata-rata ${u.util === null ? "-" : Math.round(u.util) + "%"}.`, u.over ? TONE.bad.rgb : K.SLATE, u.over ? "bold" : "normal");
+
+        K.title("Pemakaian per Shift");
+        K.table({
+            head: [["Shift", "Jumlah batch"]],
+            body: SHIFTS.concat(u.shift.Lainnya ? ["Lainnya"] : []).map(sh => [SHIFT_LABEL[sh] || sh, u.shift[sh]]),
+            columnStyles: { 1: { halign: "right" } }
+        });
+
+        K.title("Operator Loader yang Memakai Unit");
+        K.table({
+            head: [["Operator Loader", "Batch", "Rata-rata muatan (kg)"]],
+            body: Object.entries(u.loaders).sort((a, b) => b[1].n - a[1].n).map(([n, x]) => [n, x.n, x.nLoad ? nf(x.sum / x.nLoad) : "-"]),
+            columnStyles: { 1: { halign: "right" }, 2: { halign: "right" } }
+        });
+
+        K.title(`Kepatuhan SOP Mixing pada Unit (${sopText()})`);
+        if (!u.dur.n) {
+            K.text("Durasi mixing belum tercatat untuk batch pada unit ini.", K.SLATE, "italic");
+        } else {
+            const pc = n => Math.round(n / u.dur.n * 100) + "%";
+            K.table({
+                head: [["Kategori", "Jumlah batch", "Porsi"]],
+                body: [[`Sesuai SOP (${sopText()})`, u.dur.ok, pc(u.dur.ok)], [`Kurang dari ${fmtDur(SOP_MIN_SEC)}`, u.dur.fast, pc(u.dur.fast)], [`Lebih dari ${fmtDur(SOP_MAX_SEC)}`, u.dur.slow, pc(u.dur.slow)]],
+                foot: [["Rata-rata durasi mixing", u.dur.n + " batch", fmtDur(u.dur.sum / u.dur.n)]],
+                columnStyles: { 1: { halign: "right" }, 2: { halign: "right" } }
+            });
+        }
+        K.closing(["Dibuat oleh,", C.preparedName, C.preparedRole], ["Mengetahui,", C.approvedName, C.approvedRole], { notes: false });
+    });
+    K.footer("Rapor Unit Mixer");
+    return doc;
+}
+
+async function downloadRapor(name, kind) {
+    kind = kind || S.raporTab || "mixer";
+    if (!S.logs.length && !S.batches.length) return;
+    if (kind === "loader" && !Object.keys(S.loaderStats || {}).length) return toast("Belum ada batch loader pada periode ini.", "error");
+    if (kind === "helper" && !helperOrder(S.helperStats).length) return toast("Belum ada nama helper tercatat pada periode ini.", "error");
+    if (kind === "unit" && !mixerOrder(S.mixerStats).length) return toast("Belum ada unit mixer tercatat pada periode ini.", "error");
+
+    const btn = $("btnRapor");
+    const old = btn.textContent;
+    btn.disabled = true; btn.textContent = "Menyiapkan...";
+    try {
+        await ensurePdfLibs();
+        const data = {
+            from: S.from, to: S.to, logs: S.logs, batches: S.batches, dayStartHour: S.dayStartHour,
+            partial: S.mode === "live" || S.to >= opDayNow()
+        };
+        const build = kind === "loader" ? buildLoaderRaporPdf : kind === "helper" ? buildHelperRaporPdf : kind === "unit" ? buildUnitRaporPdf : buildRaporPdf;
+        const doc = build(data, name || null);
+        const per = S.from === S.to ? S.from : `${S.from}_sd_${S.to}`;
+        const who = name ? name.replace(/[^\w-]+/g, "_") : (kind === "helper" ? "Semua_Helper" : kind === "unit" ? "Semua_Unit" : "Semua_Operator");
+        doc.save(`Rapor_${RAPOR_LABEL[kind]}_${who}_${per}.pdf`);
+        toast(name ? `Rapor ${RAPOR_LABEL[kind]} ${name} berhasil dibuat` : `Rapor semua ${RAPOR_LABEL[kind].toLowerCase()} berhasil dibuat`, "success");
+    } catch (err) {
+        console.error(err);
+        toast("Gagal membuat rapor. Pastikan internet aktif lalu coba lagi.", "error");
+    } finally {
+        btn.textContent = old; btn.disabled = S.logs.length === 0 && S.batches.length === 0;
+    }
+}
+
+async function downloadPdf() {
+    if (!S.logs.length) return;
+    const btn = $("btnPdf");
+    const old = btn.textContent;
+    btn.disabled = true; btn.textContent = "Menyiapkan PDF...";
+    try {
+        await ensurePdfLibs();
+        const doc = buildReportPdf({
+            from: S.from, to: S.to, logs: S.logs, batches: S.batches, dayStartHour: S.dayStartHour,
+            partial: S.mode === "live" || S.to >= opDayNow()
+        });
+        doc.save(reportBaseName() + ".pdf");
+        toast("PDF berhasil dibuat", "success");
+    } catch (err) {
+        console.error(err);
+        toast("Gagal membuat PDF. Pastikan internet aktif lalu coba lagi.", "error");
+    } finally {
+        btn.textContent = old; btn.disabled = S.logs.length === 0;
+    }
+}
+
+/* ============================================================
+ * AI (lewat backend - API key tidak ada di halaman ini)
+ * ============================================================ */
+async function postBackend(payload) {
+    const res = await fetch(BASE_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
+    const json = await res.json();
+    if (!json || json.ok === false) throw new Error((json && json.message) || "AI gagal");
+    return json;
+}
+
+async function callGeminiText(prompt, systemInstruction) {
+    let lastErr;
+    for (let i = 0; i < 2; i++) {
+        try { return (await postBackend({ formType: "gemini", prompt, systemInstruction: systemInstruction || "" })).text; }
+        catch (e) { lastErr = e; if (/GEMINI_API_KEY|ramai/.test(e.message)) break; await new Promise(r => setTimeout(r, 1200)); }
+    }
+    throw lastErr;
+}
+
+function mdLite(t, cls) { return esc(t).replace(/\*\*(.*?)\*\*/g, `<strong class="${cls}">$1</strong>`).replace(/\n/g, "<br>"); }
+
+function openAi() { $("aiHubModal").classList.remove("hidden"); $("aiHubModal").classList.add("flex"); $("aiScope").textContent = S.from ? "Data: " + (S.from === S.to ? fmtMid(S.from) : `${fmtMid(S.from)} s/d ${fmtMid(S.to)}`) : ""; }
+function closeAi() { $("aiHubModal").classList.add("hidden"); $("aiHubModal").classList.remove("flex"); }
+
+function switchTab(tab) {
+    const rep = tab === "report";
+    $("tabReport").classList.toggle("hidden", !rep);
+    $("tabChat").classList.toggle("hidden", rep);
+    $("tabReportBtn").className = "px-4 py-2 rounded-xl text-xs font-bold " + (rep ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-300");
+    $("tabChatBtn").className = "px-4 py-2 rounded-xl text-xs font-bold " + (rep ? "bg-slate-800 text-slate-300" : "bg-indigo-600 text-white");
+}
+
+async function generateAiReport() {
+    if (!S.stats || !S.stats.rows) return toast("Belum ada data untuk dianalisis.", "error");
+    const box = $("aiReportBox"), st = S.stats;
+    box.innerHTML = '<p class="text-indigo-300 font-bold text-center py-8 animate-pulse">✨ Gemini AI sedang mengevaluasi data...</p>';
+
+    const topPens = Object.entries(st.pens).sort((a, b) => b[1].total - a[1].total).slice(0, 5).map(([n, v]) => `${n} ${Math.round(v.total)} kg`).join("; ");
+    const active = S.mode === "live" ? S.active.map(a => `${a.operator} (${a.pens} - ${Math.round(a.tonase)}kg)`).join("; ") : "";
+    const period = S.from === S.to ? fmtLong(S.from) : `${fmtMid(S.from)} s/d ${fmtMid(S.to)}`;
+    const sys = "Anda adalah Head Dairy Operations & Nutrition Manager. Buat ringkasan eksekutif distribusi pakan dalam bahasa Indonesia yang ringkas. Sertakan pencapaian tonase, kelancaran distribusi, kepatuhan SOP mixing, serta rekomendasi.";
+    const q = `Data distribusi TMR (${S.mode === "live" ? "LIVE, hari ini" : "riwayat"}) periode ${period}:
+- Pen terdistribusi: ${st.rows} pen dari ${st.batches.size} batch (Pagi ${st.shift.Pagi.n}, Siang ${st.shift.Siang.n}, Malam ${st.shift.Malam.n})
+- Total tonase distribusi (tercatat per pen di mixer): ${Math.round(st.kg)} kg (Pagi ${Math.round(st.shift.Pagi.kg)}, Siang ${Math.round(st.shift.Siang.kg)}, Malam ${Math.round(st.shift.Malam.kg)})
+- Total aktual diproses (timbangan Tonase Akhir di Loader, per batch): ${(() => { const a = computeAktualDiproses(S.batches); return a.n ? `${Math.round(a.kg)} kg dari ${a.n} batch` : "belum ada data"; })()}
+- Rata-rata durasi mixing: ${st.avgSec ? fmtDur(st.avgSec) : "n/a"}. SOP mixing ${sopText()}: sesuai ${st.sopOk} dari ${st.durBatches} batch; lebih dari ${fmtDur(SOP_MAX_SEC)}: ${st.sopSlow}; kurang dari ${fmtDur(SOP_MIN_SEC)}: ${st.sopFast}
+- Akurasi penimbangan loader (Tebon Jagung & Konsentrat, toleransi ${WEIGH_OK_PCT}%): ${loaderOrder(S.loaderStats).filter(([, o]) => o.rapor.total).map(([n, o]) => `${n} ${Math.round(o.rapor.pct)}% (${o.rapor.akurat}/${o.rapor.total} batch akurat)`).join("; ") || "belum ada data target"}
+- Kepatuhan SOP per operator: ${raporOrder(st).filter(([, o]) => o.rapor.total).map(([n, o]) => `${n} ${Math.round(o.rapor.pct)}% (${o.rapor.ok}/${o.rapor.total} batch)`).join("; ") || "-"}
+- Pen tonase terbesar: ${topPens || "-"}
+${S.mode === "live" ? "- Antrian aktif di mixer: " + (active || "tidak ada") : ""}
+
+Format:
+1. **Ringkasan Performa**
+2. **Evaluasi Distribusi & Tonase**
+3. **Kepatuhan SOP Mixing**
+4. **Rekomendasi**`;
+    try {
+        const text = await callGeminiText(q, sys);
+        GENERATED_REPORT_TEXT = text.replace(/[*_#]/g, "");
+        box.innerHTML = mdLite(text, "text-indigo-300");
+        $("ttsBtn").disabled = false;
+    } catch (e) {
+        box.innerHTML = `<p class="text-red-400 font-bold">Gagal membuat laporan AI. ${esc(e.message || "")}</p>`;
+    }
+}
+
+function b64ToBuf(b64) { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u.buffer; }
+function pcmToWav(pcm16, rate) {
+    const n = pcm16.length * 2, buf = new ArrayBuffer(44 + n), v = new DataView(buf);
+    const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, "RIFF"); v.setUint32(4, 36 + n, true); w(8, "WAVE"); w(12, "fmt "); v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true);
+    v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, n, true);
+    for (let i = 0; i < pcm16.length; i++) v.setInt16(44 + i * 2, pcm16[i], true);
+    return new Blob([buf], { type: "audio/wav" });
+}
+
+async function speakReport() {
+    if (!GENERATED_REPORT_TEXT) return;
+    const btn = $("ttsBtn"), old = btn.textContent;
+    btn.disabled = true; btn.textContent = "⏳ Memproses audio...";
+    try {
+        const r = await postBackend({ formType: "geminiTts", prompt: GENERATED_REPORT_TEXT.slice(0, 400) });
+        const rate = parseInt((/rate=(\d+)/.exec(r.mimeType || "") || [])[1] || "24000", 10);
+        const audio = new Audio(URL.createObjectURL(pcmToWav(new Int16Array(b64ToBuf(r.audio)), rate)));
+        btn.textContent = "▶ Memutar...";
+        audio.onended = () => { btn.textContent = old; btn.disabled = false; };
+        await audio.play();
+    } catch (e) {
+        toast("Gagal memutar audio AI: " + e.message, "error");
+        btn.textContent = old; btn.disabled = false;
+    }
+}
+
+async function sendAiQuery() {
+    const input = $("aiQueryInput"), q = input.value.trim();
+    if (!q) return;
+    const hist = $("chatHistory");
+    hist.insertAdjacentHTML("beforeend", `<div class="bg-slate-800 p-3 rounded-xl text-right"><p class="font-bold text-slate-300 mb-1">Supervisor</p><p>${esc(q)}</p></div>`);
+    input.value = "";
+    const id = "ld-" + Date.now();
+    hist.insertAdjacentHTML("beforeend", `<div id="${id}" class="bg-indigo-950/60 border border-indigo-500/30 p-3 rounded-xl animate-pulse"><p class="font-bold text-indigo-300 mb-1">🤖 Gemini AI Supervisor</p><p>Sedang memikirkan jawaban...</p></div>`);
+    hist.scrollTop = hist.scrollHeight;
+    try {
+        const reply = await callGeminiText(q, "Anda adalah Konsultan Nutrisi & Manajemen Peternakan Sapi Perah TMR. Jawab singkat, ilmiah, dan berbasis praktis lapang.");
+        $(id).remove();
+        hist.insertAdjacentHTML("beforeend", `<div class="bg-indigo-950/60 border border-indigo-500/30 p-3 rounded-xl"><p class="font-bold text-indigo-300 mb-1">🤖 Gemini AI Supervisor</p><p>${mdLite(reply, "text-indigo-200")}</p></div>`);
+    } catch (e) {
+        $(id).remove();
+        hist.insertAdjacentHTML("beforeend", `<div class="bg-red-950/60 border border-red-500/30 p-3 rounded-xl text-red-300">Gagal menjawab. ${esc(e.message || "")}</div>`);
+    }
+    hist.scrollTop = hist.scrollHeight;
+}
+
+/* ============================================================
+ * EVENT & START
+ * ============================================================ */
+function quickRange(kind) {
+    const t = opDayNow();
+    if (kind === "today") return [t, t];
+    if (kind === "yesterday") return [addDays(t, -1), addDays(t, -1)];
+    if (kind === "7d") return [addDays(t, -6), t];
+    return [t.slice(0, 8) + "01", t];
+}
+
+function bind() {
+    $("btnSearch").onclick = () => runSearch($("dFrom").value, $("dTo").value);
+    $("btnLive").onclick = goLive;
+    $("btnRefresh").onclick = () => {
+        if (S.mode === "live") return loadLive(true);
+        REPORT_CACHE.delete(S.from + "|" + S.to);   // Refresh = ambil ulang dari server
+        return runSearch(S.from, S.to);
+    };
+    $("btnPdf").onclick = downloadPdf;
+    $("btnCsv").onclick = downloadCsv;
+    $("btnRapor").onclick = () => downloadRapor(null, S.raporTab);
+    $("raporCards").addEventListener("click", e => {
+        const b = e.target.closest("[data-rapor]");
+        if (b) downloadRapor(b.dataset.rapor, b.dataset.kind || S.raporTab);
+    });
+    $("raporTabs").addEventListener("click", e => {
+        const b = e.target.closest("[data-rtab]");
+        if (!b) return;
+        S.raporTab = b.dataset.rtab;
+        if (S.stats) renderRapor(S.stats);
+    });
+    $("btnAi").onclick = openAi;
+    $("aiClose1").onclick = $("aiClose2").onclick = closeAi;
+    $("tabReportBtn").onclick = () => switchTab("report");
+    $("tabChatBtn").onclick = () => switchTab("chat");
+    $("btnGenReport").onclick = generateAiReport;
+    $("ttsBtn").onclick = speakReport;
+    $("btnSendAi").onclick = sendAiQuery;
+    $("aiQueryInput").addEventListener("keydown", e => { if (e.key === "Enter") sendAiQuery(); });
+    $("dFrom").addEventListener("keydown", e => { if (e.key === "Enter") $("btnSearch").click(); });
+
+    $("quickChips").addEventListener("click", e => {
+        const b = e.target.closest("[data-range]");
+        if (!b) return;
+        const [f, t] = quickRange(b.dataset.range);
+        $("dFrom").value = f; $("dTo").value = t;
+        runSearch(f, t);
+    });
+
+    document.querySelectorAll("[data-shift]").forEach(b => b.addEventListener("click", () => {
+        S.shiftFilter = b.dataset.shift;
+        document.querySelectorAll("[data-shift]").forEach(x => x.classList.toggle("on", x === b));
+        if (S.stats) renderLogs(S.stats, S.from === S.to);
+    }));
+
+    let qTimer;
+    $("q").addEventListener("input", e => {
+        clearTimeout(qTimer);
+        qTimer = setTimeout(() => { S.query = e.target.value; if (S.stats) renderLogs(S.stats, S.from === S.to); }, 200);
+    });
+
+    $("logCols").addEventListener("click", e => {
+        const b = e.target.closest("[data-more]");
+        if (!b) return;
+        S.showAll[b.dataset.more] = true;
+        renderLogs(S.stats, S.from === S.to);
+    });
+
+    document.addEventListener("visibilitychange", () => { if (!document.hidden && S.mode === "live") loadLive(); });
+}
+
+function parseHash() {
+    const p = new URLSearchParams(location.hash.replace(/^#/, ""));
+    const f = p.get("from"), t = p.get("to") || f;
+    return isKey(f) && isKey(t) ? [f, t] : null;
+}
+
+window.onload = async () => {
+    bind();
+    applyServerMeta({});
+    const t = opDayNow();
+    $("dFrom").value = t; $("dTo").value = t;
+
+    const h = parseHash();
+    if (h) { $("dFrom").value = h[0]; $("dTo").value = h[1]; await runSearch(h[0], h[1]); }
+    else await loadLive();
+
+    setInterval(() => { if (S.mode === "live" && !document.hidden) loadLive(); }, LIVE_REFRESH_MS);
+    setInterval(tickElapsed, 1000);
+};
+</script>
+</body>
+</html>

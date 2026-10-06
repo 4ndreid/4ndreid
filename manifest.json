@@ -1,0 +1,22 @@
+{
+  "name": "Dairy Feeding Apps",
+  "short_name": "Dairy Feeding Apps",
+  "description": "Portal Utama Sistem Operasional Pakan",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#030712",
+  "theme_color": "#030712",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icons/icon-192.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "icons/icon-512.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}

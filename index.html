@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dairy Apps - Portal</title>
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#030712">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #030712;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --card-bg: rgba(15, 23, 42, 0.75);
+            --card-border: rgba(255, 255, 255, 0.15);
+            
+            /* Warna Tema Aplikasi */
+            --c-fmv25: #e11d48;
+            --c-whs: #8b5cf6; 
+            --c-silo: #cf9f4f;
+            --c-dashboard: #06b6d4;
+            --c-loader: #10b981; 
+            --c-mixer: #f97316;  
+            --c-p2h: #3b82f6;    
+            --c-monitor: #64748b; 
+            --c-logout: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #030712 !important; /* Paksa Background Gelap agar Garis Terlihat */
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            position: relative;
+            overflow-x: hidden;
+            color: var(--text-main);
+        }
+
+        /* ===== CANVAS ANIMASI BACKGROUND PATHS ===== */
+        #paths-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Glow Orbs dekoratif di sudut */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: 0;
+            opacity: 0.35;
+            animation: float 10s infinite alternate ease-in-out;
+            pointer-events: none;
+        }
+        .orb-1 { width: 450px; height: 450px; background: #2563eb; top: -120px; left: -150px; }
+        .orb-2 { width: 400px; height: 400px; background: #4f46e5; bottom: -80px; right: -120px; animation-delay: -5s; }
+
+        .container {
+            width: 100%;
+            max-width: 420px;
+            position: relative;
+            z-index: 10;
+            transition: all 0.5s ease-in-out;
+        }
+
+        /* ==================== STYLE LOGIN SCREEN ==================== */
+        #login-screen {
+            background: var(--card-bg);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 38px 30px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+            text-align: center;
+        }
+
+        .login-header h2 {
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: 800;
+            margin: 0 0 8px 0;
+            letter-spacing: -1px;
+        }
+
+        .login-header p {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin: 0 0 30px 0;
+            font-weight: 600;
+        }
+
+        .input-group {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            color: #cbd5e1;
+            margin-bottom: 8px;
+            padding-left: 4px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(15, 23, 42, 0.8);
+            font-family: inherit;
+            font-size: 15px;
+            color: #ffffff;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .input-group input::placeholder {
+            color: #64748b;
+        }
+
+        .input-group input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25);
+            background: rgba(15, 23, 42, 0.95);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.5);
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(37, 99, 235, 0.7);
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        }
+
+        #login-error {
+            color: #f87171;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 15px;
+            display: none;
+        }
+
+        /* ==================== STYLE MENU SCREEN ==================== */
+        #menu-screen {
+            display: none;
+        }
+
+        #menu-screen .header {
+            text-align: center;
+            margin-bottom: 28px;
+            animation: fadeDown 0.8s ease-out forwards;
+        }
+
+        .avatar-circle {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            margin: 0 auto 16px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.02));
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5), inset 0 0 18px rgba(255,255,255,0.05);
+            animation: pulseGlow 3s infinite ease-in-out;
+        }
+
+        #menu-screen .header h1 {
+            color: #ffffff;
+            font-size: 26px;
+            font-weight: 800;
+            margin: 0 0 6px 0;
+            letter-spacing: -0.5px;
+        }
+
+        #menu-screen .header p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0;
+            letter-spacing: 0.2px;
+        }
+
+        .menu-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-bottom: 40px;
+        }
+
+        .menu-divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+            margin: 8px 6px 4px 6px;
+        }
+
+        .menu-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            padding: 14px 16px;
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(15px);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            animation: fadeUp 0.5s ease-out forwards;
+        }
+
+        /* Delay Animasi Bertahap */
+        .menu-row:nth-child(1) { animation-delay: 0.05s; }
+        .menu-row:nth-child(2) { animation-delay: 0.10s; }
+        .menu-row:nth-child(3) { animation-delay: 0.15s; }
+        .menu-row:nth-child(4) { animation-delay: 0.20s; }
+        .menu-row:nth-child(5) { animation-delay: 0.25s; }
+        .menu-row:nth-child(6) { animation-delay: 0.30s; }
+        .menu-row:nth-child(7) { animation-delay: 0.35s; }
+        .menu-row:nth-child(8) { animation-delay: 0.40s; }
+        .menu-row-logout       { animation-delay: 0.45s; }
+
+        .menu-row:hover {
+            background: rgba(30, 41, 59, 0.85);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-3px) scale(1.01);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        .menu-label {
+            flex: 1;
+            color: #ffffff;
+            font-size: 15.5px;
+            font-weight: 700;
+        }
+
+        .menu-chevron {
+            color: rgba(255, 255, 255, 0.4);
+            flex-shrink: 0;
+            transition: transform 0.3s ease;
+        }
+
+        .menu-row:hover .menu-chevron {
+            color: #ffffff;
+            transform: translateX(4px);
+        }
+
+        .icon-box {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        /* Warna Tombol Modul */
+        .bg-fmv25 { background: linear-gradient(135deg, #fb7185, #be123c); }
+        .bg-whs { background: linear-gradient(135deg, #a78bfa, #6d28d9); }
+        .bg-dashboard { background: linear-gradient(135deg, #22d3ee, #0891b2); }
+        .bg-silo { background: linear-gradient(135deg, #e4bf7a, #cf9f4f); }
+        .bg-loader { background: linear-gradient(135deg, #34d399, #059669); }
+        .bg-mixer { background: linear-gradient(135deg, #fb923c, #ea580c); }
+        .bg-p2h { background: linear-gradient(135deg, #60a5fa, #2563eb); }
+        .bg-monitor { background: linear-gradient(135deg, #94a3b8, #475569); }
+        .bg-logout { background: linear-gradient(135deg, #f87171, #dc2626); }
+
+        @keyframes fadeUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(30px, 50px) scale(1.1); }
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 8px 24px rgba(0,0,0,0.5), 0 0 0 0 rgba(255, 255, 255, 0.1); }
+            50% { box-shadow: 0 8px 24px rgba(0,0,0,0.5), 0 0 0 10px rgba(255, 255, 255, 0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Canvas untuk Animasi Garis Vektor (Background Paths) -->
+    <canvas id="paths-canvas"></canvas>
+
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
+    <!-- 1. CONTAINER LOGIN SCREEN -->
+    <div class="container" id="login-screen">
+        <div class="login-header">
+            <h2>Dairy Feeding</h2>
+            <p>Silakan login untuk mengakses sistem pakan</p>
+        </div>
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="input-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" autocomplete="username" required placeholder="Masukkan username">
+            </div>
+            <div class="input-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" autocomplete="current-password" required placeholder="Masukkan password">
+            </div>
+            <button type="submit" class="btn-login">Masuk Sistem</button>
+            <div id="login-error">Username atau Password salah!</div>
+        </form>
+    </div>
+
+    <!-- 2. CONTAINER MENU SCREEN -->
+    <div class="container" id="menu-screen">
+        <div class="header">
+            <div class="avatar-circle">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </div>
+            <h1 id="greeting-text">Selamat Datang</h1>
+            <p>Supervisor Feeding &middot; Peternakan Sapi Perah</p>
+        </div>
+
+        <div class="menu-list">
+            <a href="./fmv25/index.html" class="menu-row">
+                <div class="icon-box bg-fmv25">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 17 22 12"></polyline></svg>
+                </div>
+                <span class="menu-label">Input Usage Bahan Kering</span>
+                <svg class="menu-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </a>
+
+            <a href="./warehouse/index.html" class="menu-row">
+                <div class="icon-box bg-whs">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                </div>
+                <span class="menu-label">TF Warehouse</span>
+                <svg class="menu-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </a>
+
+            <a href="./dashboard_kedatangan/index.html" class="menu-row">
+                <div class="icon-box bg-dashboard">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="12" x2="21" y2="12"></line><line x1="12" y1="3" x2="12" y2="21"></line></svg>
+                </div>
+                <span class="menu-label">Dashboard Kedatangan</span>
+                <svg class="menu-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </a>
+
+            <a href="./dashboard_usage/index.html" class="menu-row">
+                <div class="icon-box bg-silo">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                </div>
+                <span class="menu-label">Dashboard Usage</span>
+                <svg class="menu-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </a>
+
+            <a href="./loader/index.html" class="menu-row">
+                <div class="icon-box bg-loader">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                </div>
+                <span class="menu-label">TMR Loader</span>
+                <svg class="menu-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </a>
+
+            <a href="./mixer/index.html" class="menu-row">
+                <div class="icon-box bg-mixer">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                </div>
+                <span class="menu-label">TMR Mixer</span>
+                <svg class="menu-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </a>
+
+            <a href="./p2h/index.html" class="menu-row">
+                <div class="icon-box bg-p2h">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                </div>
+                <span class="menu-label">P2H Alat Berat</span>
+                <svg class="menu-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </a>
+
+            <a href="./monitoring/index.html" class="menu-row">
+                <div class="icon-box bg-monitor">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                </div>
+                <span class="menu-label">Live Monitoring Distribusi</span>
+                <svg class="menu-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </a>
+
+            <div class="menu-divider"></div>
+
+            <a href="#" class="menu-row menu-row-logout" onclick="handleLogout(event)">
+                <div class="icon-box bg-logout">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                </div>
+                <span class="menu-label">Logout</span>
+                <svg class="menu-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </a>
+        </div>
+    </div>
+
+    <!-- SCRIPT UTAMA ANIMASI BACKGROUND PATHS (CANVAS HIGH VISIBILITY) -->
+    <script>
+        const canvas = document.getElementById('paths-canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let time = 0;
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function drawBackgroundPaths() {
+            ctx.clearRect(0, 0, width, height);
+            time += 0.008;
+
+            const lineCount = 42; // Jumlah garis mengalir
+            
+            for (let i = 0; i < lineCount; i++) {
+                ctx.beginPath();
+                
+                // Kontras tinggi untuk memastikan garis jelas terlihat di layar
+                const alpha = 0.08 + (i / lineCount) * 0.35; 
+                ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+                ctx.lineWidth = 1.2;
+
+                const startY = (height * 0.1) + (i * (height * 0.022));
+
+                // Gambar kurva melengkung mengalir
+                ctx.moveTo(-50, startY);
+                
+                for (let x = 0; x <= width + 100; x += 40) {
+                    const wave1 = Math.sin(x * 0.0018 + time + i * 0.08) * 65;
+                    const wave2 = Math.cos(x * 0.001 - time * 0.8) * 35;
+                    const y = startY + wave1 + wave2 + (x * 0.18); // Kemiringan diagonal 21st.dev style
+
+                    ctx.lineTo(x, y);
+                }
+
+                ctx.stroke();
+            }
+
+            requestAnimationFrame(drawBackgroundPaths);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        drawBackgroundPaths();
+    </script>
+
+    <!-- LOGIKAL SCRIPT LOGIN & SAPAAN WAKTU DINAMIS -->
+    <script>
+        const CONFIG_USER = "admin";
+        const CONFIG_PASS = "pakan123";
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (sessionStorage.getItem("isLoggedIn") === "true") {
+                updateGreeting();
+                showMenuInstant();
+            }
+        });
+
+        function updateGreeting() {
+            const currentHour = new Date().getHours();
+            let greeting = "Selamat Datang";
+
+            if (currentHour >= 4 && currentHour < 11) {
+                greeting = "Selamat Pagi ☀️";
+            } else if (currentHour >= 11 && currentHour < 15) {
+                greeting = "Selamat Siang 🌤️";
+            } else if (currentHour >= 15 && currentHour < 18) {
+                greeting = "Selamat Sore 🌅";
+            } else {
+                greeting = "Selamat Malam 🌙";
+            }
+
+            document.getElementById("greeting-text").textContent = greeting;
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const u = document.getElementById("username").value;
+            const p = document.getElementById("password").value;
+            const errMsg = document.getElementById("login-error");
+
+            if (u === CONFIG_USER && p === CONFIG_PASS) {
+                errMsg.style.display = "none";
+                sessionStorage.setItem("isLoggedIn", "true");
+                updateGreeting();
+                transitionToMenu();
+            } else {
+                errMsg.style.display = "block";
+                document.getElementById("password").value = "";
+            }
+        }
+
+        function transitionToMenu() {
+            const loginScreen = document.getElementById("login-screen");
+            const menuScreen = document.getElementById("menu-screen");
+
+            loginScreen.style.opacity = "0";
+            loginScreen.style.transform = "translateY(-20px)";
+            
+            setTimeout(() => {
+                loginScreen.style.display = "none";
+                menuScreen.style.display = "block";
+                menuScreen.style.opacity = "0";
+                
+                setTimeout(() => {
+                    menuScreen.style.opacity = "1";
+                }, 50);
+            }, 400);
+        }
+
+        function showMenuInstant() {
+            document.getElementById("login-screen").style.display = "none";
+            document.getElementById("menu-screen").style.display = "block";
+        }
+
+        function handleLogout(event) {
+            event.preventDefault();
+            const loginScreen = document.getElementById("login-screen");
+            const menuScreen = document.getElementById("menu-screen");
+
+            menuScreen.style.opacity = "0";
+            menuScreen.style.transform = "translateY(10px)";
+
+            setTimeout(() => {
+                menuScreen.style.display = "none";
+                menuScreen.style.transform = "translateY(0)";
+                sessionStorage.removeItem("isLoggedIn");
+
+                document.getElementById("username").value = "";
+                document.getElementById("password").value = "";
+
+                loginScreen.style.display = "block";
+                loginScreen.style.opacity = "0";
+                loginScreen.style.transform = "translateY(-20px)";
+
+                setTimeout(() => {
+                    loginScreen.style.opacity = "1";
+                    loginScreen.style.transform = "translateY(0)";
+                }, 50);
+            }, 400);
+        }
+    </script>
+</body>
+</html>
