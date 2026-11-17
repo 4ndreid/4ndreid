@@ -14,11 +14,11 @@ function getFonnteToken() {
 // Target nomor/grup WA terpisah
 var WA_TARGET_P2H = "6285234192837";      // Penerima Laporan P2H
 var WA_TARGET_TROUBLE = "6282334366178,6281339508037,6285234192837";  // Penerima Laporan Trouble
-var WA_TARGET_GREASING = "6282334366178,6281339508037,6285234192837"; // Penerima Pengingat Greasing/Pengecekan Mingguan
+var WA_TARGET_GREASING = "6282334366178,6281339508037,6285234192837"; // Penerima Pengingat Greasing/Pengecekan (3 harian)
 
-// Konfigurasi jadwal Greasing & Pengecekan Mingguan
-var GREASING_DEFAULT_INTERVAL_HARI = 7;   // Default interval jika belum diatur di sheet Data_Greasing
-var GREASING_WARNING_HARI = 2;            // Ambang "Segera" (H-2 sebelum jatuh tempo)
+// Konfigurasi jadwal Greasing & Pengecekan (siklus 3 hari)
+var GREASING_DEFAULT_INTERVAL_HARI = 3;   // Default interval jika belum diatur di sheet Data_Greasing
+var GREASING_WARNING_HARI = 1;            // Ambang "Segera" (H-1 sebelum jatuh tempo)
 
 // Konfigurasi jadwal Servis (disamakan dengan ambang di frontend)
 var SERVICE_WARNING_HM = 25;              // Ambang "Segera Servis" (dalam HM)
@@ -33,11 +33,39 @@ var RAPOR_ACTIVITY_TARGET_P2H = 25;       // Jumlah P2H per periode yang diangga
 // trouble untuk unit itu) dalam X jam, sistem mengingatkan agar unit dibawa ke mekanik.
 var P2H_REMINDER_DELAY_JAM = 5;
 var P2H_REMINDER_COL = 16; // Kolom P di sheet "P2H" — penanda WA reminder sudah terkirim (agar tidak dobel)
+var P2H_RESOLVED_COL = 17; // Kolom Q di sheet "P2H" — penanda temuan sudah divalidasi/diperbaiki manual
+
+// Label checklist P2H — HARUS sinkron dengan CHECKLIST_ITEMS di index_P2H.html (urutan p1..p9)
+var CHECKLIST_ITEM_LABELS = [
+  "Oli Mesin", "Visual Fuel/Sensor/Seal", "Water Separator",
+  "Aki (Jamur +/-)", "Level Coolant", "Oli Transmisi",
+  "Visual Body (Ka, Ki, Bel)", "Kondisi Ban", "Lampu Alat"
+];
 
 // PIN Supervisor untuk mengunci form Penilaian Supervisor — diatur di Script Properties
 // (Project Settings > Script Properties), nama properti: SUPERVISOR_PIN
 function getSupervisorPin() {
   return PropertiesService.getScriptProperties().getProperty('SUPERVISOR_PIN');
+}
+
+/**
+ * FUNGSI TEST MANUAL — pilih fungsi ini di dropdown (bukan fungsi helper seperti
+ * getGreasingHistory/getServisHistory/dll) lalu klik "Jalankan" kalau mau debug
+ * manual dari editor Apps Script. Fungsi-fungsi helper butuh parameter "ss" yang
+ * biasanya dikirim otomatis oleh doGet/doPost — kalau dijalankan langsung tanpa
+ * lewat sini, "ss" akan undefined dan muncul error "Cannot read properties of
+ * undefined (reading 'getSheetByName')". Ubah baris di bawah sesuai yang mau dites,
+ * lalu lihat hasilnya di Log eksekusi (Ctrl+Enter atau menu Log eksekusi).
+ */
+function testManual() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // Contoh — ganti dengan fungsi yang ingin Anda tes:
+  Logger.log(JSON.stringify(getGreasingHistory(ss, "", 10)));
+  // Logger.log(JSON.stringify(getServisHistory(ss, "", 10)));
+  // Logger.log(JSON.stringify(getInitData(ss)));
+  // Logger.log(JSON.stringify(getRaporUnit(ss, new Date(2026,8,1), new Date(2026,8,30))));
+  // Logger.log(JSON.stringify(getP2HFollowupList(ss)));
 }
 
 function doGet(e) {
@@ -67,7 +95,12 @@ function doGet(e) {
 
   if (action == "downloadRaporPdf") return generateRaporPdf(ss, e.parameter);
 
+  // Export PDF riwayat P2H / Servis / Greasing per unit.
+  if (action == "downloadHistoryPdf") return generateHistoryPdf(ss, e.parameter);
+
   if (action == "getP2HFollowupList") return jsonOutput({ rows: getP2HFollowupList(ss) });
+
+  if (action == "downloadFormPdf") return generateFormPdf(ss, e.parameter);
 
   return HtmlService.createHtmlOutput("Web App P2H Aktif.");
 }
@@ -84,9 +117,11 @@ function doPost(e) {
   if (type === "trouble") return submitTrouble(ss, d);
   if (type === "resolve_trouble") return resolveTrouble(ss, d);
   if (type === "request") return submitRequestServis(ss, d);
+  if (type === "resolve_request") return resolveRequestServis(ss, d);
   if (type === "history_servis" || type === "servis") return submitHistoryServis(ss, d);
   if (type === "greasing" || type === "history_greasing") return submitHistoryGreasing(ss, d);
   if (type === "penilaian_supervisor") return submitPenilaianSupervisor(ss, d);
+  if (type === "resolve_p2h_followup") return resolveP2HFollowup(ss, d);
 
   return submitP2H(ss, d);
 }
@@ -336,7 +371,7 @@ function getServisHistory(ss, unitFilter, limit) {
 }
 
 /* =========================================================
- *  GREASING & PENGECEKAN MINGGUAN
+ *  GREASING & PENGECEKAN BERKALA (3 HARIAN)
  *  Sheet "Data_Greasing"  : jadwal per unit (interval hari, tgl terakhir, override)
  *  Sheet "History_Greasing": log setiap kali greasing/pengecekan dilakukan
  * ========================================================= */
@@ -359,21 +394,22 @@ function submitHistoryGreasing(ss, d) {
 
   var rawDate = d.tanggalGreasing || d.tanggal || new Date();
   var tglGreasing = formatDateSafe(rawDate);
+  var petugas = d.operator || d.petugas || "-";
 
   historySheet.appendRow([
     new Date(),
     d.alat,
     tglGreasing,
-    d.operator || d.petugas || "-",
+    petugas,
     d.catatan || "-"
   ]);
 
-  updateDataGreasingTerakhir(ss, d.alat, tglGreasing);
+  updateDataGreasingTerakhir(ss, d.alat, tglGreasing, petugas);
 
   return jsonOutput({ result: "success", message: "Record greasing/pengecekan berhasil disimpan" });
 }
 
-function updateDataGreasingTerakhir(ss, unitName, tgl) {
+function updateDataGreasingTerakhir(ss, unitName, tgl, petugas) {
   var sheet = findSheet(ss, GREASING_SCHEDULE_SHEET_NAMES);
   if (!sheet) {
     // Buat sheet jadwal otomatis jika belum ada, supaya fitur tetap jalan out-of-the-box
@@ -384,6 +420,7 @@ function updateDataGreasingTerakhir(ss, unitName, tgl) {
   var headerMap = getHeaderMap(sheet);
   var colUnit = resolveColumn(headerMap, sheet, GREASING_FIELD_DEFS.unit);
   var colTgl = resolveColumn(headerMap, sheet, GREASING_FIELD_DEFS.tglGreasingTerakhir);
+  var colPic = resolveColumn(headerMap, sheet, GREASING_FIELD_DEFS.pic);
 
   var lastRow = sheet.getLastRow();
   var units = lastRow >= 2 ? sheet.getRange(2, colUnit, lastRow - 1, 1).getValues().flat() : [];
@@ -401,6 +438,13 @@ function updateDataGreasingTerakhir(ss, unitName, tgl) {
     sheet.getRange(rowIndex, colUnit).setValue(unitName);
   }
   sheet.getRange(rowIndex, colTgl).setValue(tgl);
+
+  // PIC = petugas yang terakhir mengerjakan greasing/cek unit ini (auto-update).
+  // Kalau Anda ingin PIC diam sebagai "penanggung jawab tetap" dan TIDAK berubah
+  // setiap kali ada yang input, hapus 2 baris di bawah ini dan isi kolom PIC manual di sheet.
+  if (colPic && petugas) {
+    sheet.getRange(rowIndex, colPic).setValue(petugas);
+  }
 }
 
 function getGreasingHistory(ss, unitFilter, limit) {
@@ -524,7 +568,7 @@ function checkAndSendGreasingReminders() {
     return "• *" + u.nama + "* — " + tag + " (jadwal: " + (u.nextGreasingDate || "-") + ")";
   });
 
-  var msg = "🛢️ *PENGINGAT GREASING & PENGECEKAN MINGGUAN*\n" +
+  var msg = "🛢️ *PENGINGAT GREASING & PENGECEKAN (3 HARIAN)*\n" +
             "------------------------------------\n" +
             lines.join("\n") + "\n\n" +
             "Mohon segera dijadwalkan/dilaksanakan dan dicatat di aplikasi P2H.\n" +
@@ -789,6 +833,128 @@ function generateRaporPdf(ss, params) {
   }
 }
 
+/**
+ * Export PDF riwayat P2H, Servis, atau Greasing untuk satu unit.
+ * Endpoint: doGet?action=downloadHistoryPdf&jenis=p2h|servis|greasing&unit=NAMA_UNIT
+ * Mengembalikan JSON {result, filename, base64} agar kompatibel dengan frontend.
+ */
+function generateHistoryPdf(ss, params) {
+  try {
+    params = params || {};
+    var jenis = String(params.jenis || "").trim().toLowerCase();
+    var unit = String(params.unit || "").trim();
+
+    if (["p2h", "servis", "greasing"].indexOf(jenis) === -1) {
+      return jsonOutput({ result: "error", message: "Jenis riwayat tidak valid. Gunakan p2h, servis, atau greasing." });
+    }
+    if (!unit) {
+      return jsonOutput({ result: "error", message: "Unit belum dipilih." });
+    }
+
+    var sheetName = jenis === "p2h" ? "P2H" : (jenis === "servis" ? "History_Servis" : "History_Greasing");
+    var sheet = ss.getSheetByName(sheetName);
+    var maxRows = sheet && sheet.getLastRow() > 1 ? sheet.getLastRow() - 1 : 1;
+    var result;
+    if (jenis === "p2h") {
+      result = getHistory(ss, unit, maxRows);
+    } else if (jenis === "servis") {
+      result = getServisHistory(ss, unit, maxRows);
+    } else {
+      result = getGreasingHistory(ss, unit, maxRows);
+    }
+    var rows = result && result.rows ? result.rows : [];
+
+    var title = jenis === "p2h" ? "RIWAYAT PEMERIKSAAN P2H" :
+      (jenis === "servis" ? "RIWAYAT SERVIS" : "RIWAYAT GREASING & PENGECEKAN");
+    var headers;
+    var bodyRows = [];
+
+    if (jenis === "p2h") {
+      headers = ["No", "Waktu Input", "Shift", "Operator", "HM"]
+        .concat(CHECKLIST_ITEM_LABELS)
+        .concat(["Catatan"]);
+      bodyRows = rows.map(function (r, i) {
+        var checklist = Array.isArray(r.checklist) ? r.checklist : [];
+        while (checklist.length < CHECKLIST_ITEM_LABELS.length) checklist.push("");
+        return [i + 1, r.timestamp, r.shift, r.operator, r.hm]
+          .concat(checklist.slice(0, CHECKLIST_ITEM_LABELS.length))
+          .concat([r.catatan]);
+      });
+    } else if (jenis === "servis") {
+      headers = ["No", "Waktu Input", "Tanggal Servis", "HM Servis", "Teknisi / Catatan"];
+      bodyRows = rows.map(function (r, i) {
+        return [i + 1, r.timestamp, r.tanggalServis, r.hmServis, r.catatan];
+      });
+    } else {
+      headers = ["No", "Waktu Input", "Tanggal Greasing / Cek", "Petugas", "Catatan"];
+      bodyRows = rows.map(function (r, i) {
+        return [i + 1, r.timestamp, r.tanggalGreasing, r.petugas, r.catatan];
+      });
+    }
+
+    var headerHtml = headers.map(function (h) {
+      return "<th>" + escapeHtmlServer(h) + "</th>";
+    }).join("");
+
+    var bodyHtml;
+    if (bodyRows.length === 0) {
+      bodyHtml = "<tr><td class='empty' colspan='" + headers.length + "'>Belum ada data riwayat untuk unit ini.</td></tr>";
+    } else {
+      bodyHtml = bodyRows.map(function (row) {
+        return "<tr>" + row.map(function (value) {
+          return "<td>" + escapeHtmlServer(value === null || value === undefined ? "" : value) + "</td>";
+        }).join("") + "</tr>";
+      }).join("");
+    }
+
+    var tz = Session.getScriptTimeZone();
+    var printedAt = Utilities.formatDate(new Date(), tz, "dd/MM/yyyy HH:mm");
+    var pageOrientation = jenis === "p2h" ? "landscape" : "portrait";
+    var html = "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>" +
+      "@page{size:A4 " + pageOrientation + ";margin:10mm;}" +
+      "body{font-family:Arial,Helvetica,sans-serif;color:#111827;font-size:9px;}" +
+      "h1{font-size:16px;text-align:center;margin:0 0 4px;}" +
+      ".brand{text-align:center;font-size:9px;font-weight:bold;letter-spacing:2px;color:#2563eb;margin-bottom:3px;}" +
+      ".meta{margin:14px 0 10px;line-height:1.7;font-size:10px;}" +
+      "table{width:100%;border-collapse:collapse;table-layout:auto;}" +
+      "thead{display:table-header-group;}tr{page-break-inside:avoid;}" +
+      "th,td{border:1px solid #9ca3af;padding:5px 4px;vertical-align:top;overflow-wrap:anywhere;}" +
+      "th{background:#e5e7eb;text-align:center;font-weight:bold;}td{text-align:left;}" +
+      ".empty{text-align:center;padding:18px;}" +
+      ".footer{margin-top:14px;font-size:8px;color:#6b7280;}" +
+      (jenis === "p2h" ? "th,td{font-size:7px;padding:4px 2px;}" : "") +
+      "</style></head><body>" +
+      "<div class='brand'>DAIRY FEED OPS</div>" +
+      "<h1>" + title + "</h1>" +
+      "<div class='meta'><b>Unit:</b> " + escapeHtmlServer(unit) + "<br>" +
+      "<b>Jumlah data:</b> " + rows.length + " record<br>" +
+      "<b>Tanggal cetak:</b> " + printedAt + "</div>" +
+      "<table><thead><tr>" + headerHtml + "</tr></thead><tbody>" + bodyHtml +
+      "</tbody></table>" +
+      "<div class='footer'>Dokumen dibuat otomatis oleh aplikasi P2H Alat Berat.</div>" +
+      "</body></html>";
+
+    var safeUnit = unit.replace(/[^a-zA-Z0-9_-]+/g, "_").replace(/^_+|_+$/g, "");
+    if (!safeUnit) safeUnit = "Unit";
+    var filename = "Riwayat_" + jenis.toUpperCase() + "_" + safeUnit + ".pdf";
+    var pdfBlob = Utilities.newBlob(html, "text/html", "riwayat.html")
+      .getAs("application/pdf")
+      .setName(filename);
+
+    return jsonOutput({
+      result: "success",
+      filename: filename,
+      base64: Utilities.base64Encode(pdfBlob.getBytes())
+    });
+  } catch (err) {
+    Logger.log("ERROR generateHistoryPdf: " + (err && err.stack ? err.stack : err));
+    return jsonOutput({
+      result: "error",
+      message: "Gagal membuat PDF riwayat: " + (err && err.message ? err.message : String(err))
+    });
+  }
+}
+
 function escapeHtmlServer(str) {
   if (str === null || str === undefined) return "";
   return String(str)
@@ -913,48 +1079,75 @@ function buildRaporHtmlOperator(d, period) {
  * ========================================================= */
 
 /**
- * Mengumpulkan baris P2H dengan temuan CHECK yang belum ditindaklanjuti
- * (belum ada Trouble_Report untuk unit itu SETELAH waktu P2H tsb) dan
- * sudah melewati ambang waktu P2H_REMINDER_DELAY_JAM jam.
+ * Mengumpulkan temuan P2H yang benar-benar masih perlu ditindaklanjuti — SATU entri per unit,
+ * diambil dari pemeriksaan P2H TERBARU unit tsb (bukan setiap baris riwayat lama), supaya:
+ *  - Kalau unit sudah dicek ulang dan hasilnya bersih (tidak ada CHECK lagi), otomatis hilang.
+ *  - Kalau sudah ada Trouble_Report untuk unit itu setelah P2H tsb, otomatis hilang.
+ *  - Kalau sudah ditandai selesai manual (lihat resolveP2HFollowup), otomatis hilang.
  */
 function getP2HFollowupCandidates(ss) {
   var sheet = ss.getSheetByName("P2H");
   if (!sheet || sheet.getLastRow() < 2) return [];
 
   var lastRow = sheet.getLastRow();
-  var numCols = Math.max(sheet.getLastColumn(), P2H_REMINDER_COL);
+  var numCols = Math.max(sheet.getLastColumn(), P2H_RESOLVED_COL);
   var data = sheet.getRange(2, 1, lastRow - 1, numCols).getValues();
 
   var troubleSheet = findSheet(ss, TROUBLE_SHEET_NAMES);
   var troubleRows = troubleSheet ? readSheetFlexible(troubleSheet, TROUBLE_FIELDS) : [];
 
-  var now = new Date();
-  var candidates = [];
-
+  // Kelompokkan baris P2H per unit, urut berdasarkan waktu
+  var rowsByUnit = {};
   data.forEach(function (row, idx) {
     var ts = row[0] ? new Date(row[0]) : null;
     if (!ts || isNaN(ts.getTime())) return;
-
-    var hasIssue = row.slice(5, 14).indexOf("CHECK") !== -1;
-    if (!hasIssue) return;
-
-    var hoursSince = (now.getTime() - ts.getTime()) / 3600000;
-    if (hoursSince < P2H_REMINDER_DELAY_JAM) return;
-
     var unit = row[3];
-    var alreadyReported = troubleRows.some(function (t) {
-      return t.unit === unit && t.timestamp && new Date(t.timestamp) > ts;
-    });
-    if (alreadyReported) return;
-
-    candidates.push({
+    if (!unit) return;
+    if (!rowsByUnit[unit]) rowsByUnit[unit] = [];
+    rowsByUnit[unit].push({
       rowIndex: idx + 2,
       timestamp: ts,
       operator: row[2],
-      unit: unit,
+      checklist: row.slice(5, 14),
       catatan: row[14] || "",
-      jamLalu: Math.floor(hoursSince),
+      resolvedManual: !!row[P2H_RESOLVED_COL - 1],
       reminderSent: !!row[P2H_REMINDER_COL - 1]
+    });
+  });
+
+  var now = new Date();
+  var candidates = [];
+
+  Object.keys(rowsByUnit).forEach(function (unit) {
+    var rows = rowsByUnit[unit].sort(function (a, b) { return a.timestamp - b.timestamp; });
+    var last = rows[rows.length - 1]; // pemeriksaan P2H TERBARU untuk unit ini
+
+    var hasIssue = last.checklist.indexOf("CHECK") !== -1;
+    if (!hasIssue) return;              // pemeriksaan terbaru sudah bersih -> selesai
+    if (last.resolvedManual) return;    // sudah divalidasi/ditandai selesai manual
+
+    var hoursSince = (now.getTime() - last.timestamp.getTime()) / 3600000;
+    if (hoursSince < P2H_REMINDER_DELAY_JAM) return;
+
+    var alreadyReported = troubleRows.some(function (t) {
+      return t.unit === unit && t.timestamp && new Date(t.timestamp) > last.timestamp;
+    });
+    if (alreadyReported) return;
+
+    var flaggedItems = [];
+    last.checklist.forEach(function (v, i) {
+      if (v === "CHECK") flaggedItems.push(CHECKLIST_ITEM_LABELS[i] || ("Item " + (i + 1)));
+    });
+
+    candidates.push({
+      rowIndex: last.rowIndex,
+      timestamp: last.timestamp,
+      operator: last.operator,
+      unit: unit,
+      catatan: last.catatan,
+      flaggedItems: flaggedItems,
+      jamLalu: Math.floor(hoursSince),
+      reminderSent: last.reminderSent
     });
   });
 
@@ -966,13 +1159,43 @@ function getP2HFollowupCandidates(ss) {
 function getP2HFollowupList(ss) {
   return getP2HFollowupCandidates(ss).map(function (c) {
     return {
+      rowIndex: c.rowIndex,
       timestamp: Utilities.formatDate(c.timestamp, Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm"),
       operator: c.operator,
       unit: c.unit,
       catatan: c.catatan,
+      flaggedItems: c.flaggedItems,
       jamLalu: c.jamLalu
     };
   });
+}
+
+/**
+ * Validasi manual: mekanik/supervisor menandai temuan P2H sudah diperbaiki/diperiksa,
+ * meski belum sempat ada P2H ulang atau laporan Trouble formal untuk unit itu.
+ * Dicocokkan ulang ke unit di baris tsb sebagai pengaman jika data sudah berubah.
+ */
+function resolveP2HFollowup(ss, d) {
+  var sheet = ss.getSheetByName("P2H");
+  if (!sheet) return jsonOutput({ result: "error", message: "Sheet P2H tidak ditemukan." });
+
+  var rowIndex = parseInt(d.rowIndex, 10);
+  if (!rowIndex || rowIndex < 2 || rowIndex > sheet.getLastRow()) {
+    return jsonOutput({ result: "error", message: "Data tidak valid, silakan refresh halaman." });
+  }
+
+  var rowVals = sheet.getRange(rowIndex, 1, 1, 4).getValues()[0];
+  var rowUnit = rowVals[3];
+  if (String(rowUnit).trim() !== String(d.unit || "").trim()) {
+    return jsonOutput({ result: "error", message: "Data sudah berubah, silakan refresh halaman dan coba lagi." });
+  }
+
+  var note = (d.resolvedBy || "-") + " pada " +
+    Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm") +
+    (d.catatanPenyelesaian ? " — " + d.catatanPenyelesaian : "");
+  sheet.getRange(rowIndex, P2H_RESOLVED_COL).setValue(note);
+
+  return jsonOutput({ result: "success", message: "Temuan " + rowUnit + " ditandai selesai." });
 }
 
 /**
@@ -990,6 +1213,7 @@ function checkAndSendP2HFollowupReminders() {
   var lines = due.map(function (it) {
     return "• *" + it.unit + "* — dilaporkan " + it.operator + " (" +
       Utilities.formatDate(it.timestamp, Session.getScriptTimeZone(), "dd/MM HH:mm") + ", " + it.jamLalu + " jam lalu)" +
+      (it.flaggedItems && it.flaggedItems.length ? "\n   Item: " + it.flaggedItems.join(", ") : "") +
       (it.catatan ? "\n   Catatan: " + it.catatan : "");
   });
 
@@ -1095,6 +1319,300 @@ function getSupervisorAssessmentMap(ss, periodKey) {
   return map;
 }
 
+/* =========================================================
+ *  FORM PENGAJUAN SERVIS & GREASE (PDF untuk hardcopy + tanda tangan)
+ *  Dipanggil lewat doGet?action=downloadFormPdf&jenis=servis|grease&unit=NAMA_UNIT
+ *  Tanda tangan: Operator Alat, SPV Feed, Mekanik.
+ * ========================================================= */
+
+var FORM_SPV_NAME = "Eko Andre";
+var FORM_SPV_TITLE = "SPV Feed";
+var BULAN_INDO = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+function formatTanggalIndo(date) {
+  var tz = Session.getScriptTimeZone();
+  var d = parseInt(Utilities.formatDate(date, tz, "d"), 10);
+  var m = parseInt(Utilities.formatDate(date, tz, "M"), 10) - 1;
+  var y = Utilities.formatDate(date, tz, "yyyy");
+  return d + " " + BULAN_INDO[m] + " " + y;
+}
+
+function formatAngkaForm(n) {
+  if (n === null || n === undefined || isNaN(n)) return "-";
+  return String(Math.round(Number(n) * 10) / 10).replace(".", ",");
+}
+
+/** P2H terbaru untuk 1 unit: operator terakhir + item CHECK. */
+function getLatestP2HForUnit(ss, unitName) {
+  var sheet = ss.getSheetByName("P2H");
+  if (!sheet || sheet.getLastRow() < 2) return null;
+  var numCols = Math.max(sheet.getLastColumn(), 15);
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, numCols).getValues();
+  var key = String(unitName).trim().toLowerCase();
+  var latest = null;
+  data.forEach(function (r) {
+    if (String(r[3]).trim().toLowerCase() !== key) return;
+    var ts = r[0] ? new Date(r[0]) : null;
+    if (!ts || isNaN(ts.getTime())) return;
+    if (!latest || ts > latest.timestamp) {
+      var flagged = [];
+      r.slice(5, 14).forEach(function (v, i) {
+        if (v === "CHECK") flagged.push(CHECKLIST_ITEM_LABELS[i] || ("Item " + (i + 1)));
+      });
+      latest = { timestamp: ts, operator: r[2], flaggedItems: flagged, catatan: r[14] || "" };
+    }
+  });
+  return latest;
+}
+
+/** Deskripsi trouble yang belum selesai untuk 1 unit. */
+function getActiveTroublesForUnit(ss, unitName) {
+  var sheet = findSheet(ss, TROUBLE_SHEET_NAMES);
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  var key = String(unitName).trim().toLowerCase();
+  return readSheetFlexible(sheet, TROUBLE_FIELDS).filter(function (r) {
+    var st = String(r.status || "").trim().toLowerCase();
+    return String(r.unit || "").trim().toLowerCase() === key && st !== "selesai" && st !== "done" && st !== "closed";
+  }).map(function (r) { return r.deskripsi || "Trouble belum diperbaiki"; });
+}
+
+/** Kumpulkan semua data 1 unit yang dibutuhkan form. Null jika unit tidak ada di sheet Unit. */
+function getUnitFormContext(ss, unitName) {
+  var unitSheet = ss.getSheetByName("Unit");
+  var unitNames = (unitSheet && unitSheet.getLastRow() > 1)
+    ? unitSheet.getRange(2, 1, unitSheet.getLastRow() - 1, 1).getValues().flat().filter(function (v) { return v !== ""; })
+    : [];
+  var target = String(unitName || "").trim().toLowerCase();
+  var name = null;
+  unitNames.forEach(function (n) { if (String(n).trim().toLowerCase() === target) name = n; });
+  if (!name) return null;
+
+  var s = getServisScheduleRawMap(ss)[name] || {};
+  var rec = getCurrentHMMap(ss)[name];
+  var currentHM = rec ? rec.hm : s.hmServisTerakhir;
+  var interval = parseHmNumber2(s.interval);
+  var servisCalc = computeServisStatus(interval, s.hmServisTerakhir, currentHM, s.overrideHM);
+  var hasOverride = s.overrideHM !== "" && s.overrideHM !== null && s.overrideHM !== undefined;
+
+  var p2h = getLatestP2HForUnit(ss, name);
+
+  return {
+    nama: name,
+    tanggal: new Date(),
+    currentHM: currentHM,
+    servis: {
+      interval: interval,
+      lastHM: s.hmServisTerakhir,
+      tglTerakhir: formatDateSafe(s.tglServisTerakhir),
+      status: servisCalc.status,
+      nextHM: servisCalc.nextHM,
+      remaining: servisCalc.remaining,
+      hasOverride: hasOverride
+    },
+    grease: computeGreasingSchedule(ss, [name])[0] || {},
+    p2h: p2h,
+    troubles: getActiveTroublesForUnit(ss, name)
+  };
+}
+
+function servisStatusText(sv) {
+  if (sv.status === "BELUM_DIATUR") return "Belum diatur";
+  var rem = formatAngkaForm(Math.abs(sv.remaining));
+  if (sv.status === "OVERDUE") return "TERLAMBAT " + rem + " HM";
+  return (sv.status === "SEGERA" ? "SEGERA - " : "Aman - ") + "sisa " + rem + " HM";
+}
+
+function greaseStatusText(g) {
+  if (g.statusGreasing === "BELUM_DIATUR" || g.remainingDaysGreasing === null || g.remainingDaysGreasing === undefined) {
+    return "Belum diatur / belum pernah dicatat";
+  }
+  var r = g.remainingDaysGreasing;
+  if (r < 0) return "TERLAMBAT " + Math.abs(r) + " hari";
+  if (r === 0) return "JATUH TEMPO HARI INI";
+  return (g.statusGreasing === "SEGERA" ? "SEGERA - " : "Aman - ") + r + " hari lagi";
+}
+
+function formKvRow(label, valueHtml) {
+  return "<tr><th>" + label + "</th><td>" + valueHtml + "</td></tr>";
+}
+
+function formLines(n) {
+  var rows = "";
+  for (var i = 0; i < n; i++) rows += "<tr><td class='ln'>&nbsp;</td></tr>";
+  return "<table class='lines'>" + rows + "</table>";
+}
+
+/** Section "Kondisi Terkini" (otomatis): temuan P2H terakhir + trouble aktif. */
+function formKondisiSection(ctx) {
+  var tz = Session.getScriptTimeZone();
+  var p2hText;
+  if (!ctx.p2h) {
+    p2hText = "Belum ada data P2H untuk unit ini";
+  } else {
+    var tgl = Utilities.formatDate(ctx.p2h.timestamp, tz, "dd/MM/yyyy HH:mm");
+    p2hText = ctx.p2h.flaggedItems.length > 0
+      ? "<b>" + escapeHtmlServer(ctx.p2h.flaggedItems.join(", ")) + "</b> (dilaporkan " + escapeHtmlServer(ctx.p2h.operator) + ", " + tgl + ")"
+      : "Tidak ada item CEK (P2H terakhir " + tgl + ")";
+  }
+  var troubleText = ctx.troubles.length > 0
+    ? ctx.troubles.map(function (t) { return escapeHtmlServer(t); }).join("; ")
+    : "Tidak ada trouble aktif";
+
+  return "<h2 class='sec'>B. Kondisi Terkini Unit (otomatis dari aplikasi)</h2>" +
+    "<table class='kv'>" +
+      formKvRow("Temuan P2H terakhir", p2hText) +
+      formKvRow("Trouble aktif", troubleText) +
+    "</table>";
+}
+
+function formSignatureBlock() {
+  function cell(role, name, title) {
+    return "<td class='sg'>" +
+      "<div class='sg-role'>" + role + "</div>" +
+      "<div class='sg-space'>&nbsp;</div>" +
+      "<div class='sg-name'>" + name + "</div>" +
+      "<div class='sg-title'>" + title + "</div>" +
+      "<div class='sg-date'>Tgl: ....... / ....... / ...........</div>" +
+    "</td>";
+  }
+  return "<h2 class='sec'>Persetujuan &amp; Tanda Tangan</h2>" +
+    "<table class='sign'><tr>" +
+      cell("Diajukan oleh,", "(............................)", "Operator Alat") +
+      cell("Diketahui oleh,", escapeHtmlServer(FORM_SPV_NAME), escapeHtmlServer(FORM_SPV_TITLE)) +
+      cell("Dikerjakan oleh,", "(............................)", "Mekanik") +
+    "</tr></table>";
+}
+
+function formHtmlShell(judul, prefix, ctx, bodyHtml) {
+  var tz = Session.getScriptTimeZone();
+  var kode = String(ctx.nama).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  var noForm = prefix + "/" + Utilities.formatDate(ctx.tanggal, tz, "yyyyMMdd") + "/" + kode;
+
+  return "<!DOCTYPE html><html><head><meta charset='utf-8'><style>" +
+    "body{font-family:Arial,Helvetica,sans-serif;color:#111827;font-size:11px;padding:22px 26px;}" +
+    ".eyebrow{font-size:9px;letter-spacing:.12em;color:#2563eb;font-weight:bold;}" +
+    ".title{font-size:17px;font-weight:bold;margin-top:2px;}" +
+    "table.head{width:100%;border-collapse:collapse;border-bottom:2px solid #111827;margin-bottom:10px;}" +
+    "table.head td{vertical-align:bottom;padding:0 0 8px 0;}" +
+    "h2.sec{font-size:11.5px;margin:14px 0 5px 0;padding:4px 8px;background:#e5e7eb;border-left:4px solid #111827;}" +
+    "table.kv{width:100%;border-collapse:collapse;margin-bottom:4px;}" +
+    "table.kv th{width:32%;text-align:left;background:#f3f4f6;border:1px solid #d1d5db;padding:5px 8px;font-size:10.5px;}" +
+    "table.kv td{border:1px solid #d1d5db;padding:5px 8px;font-size:10.5px;}" +
+    "table.lines{width:100%;border-collapse:collapse;}" +
+    "td.ln{border-bottom:1px solid #9ca3af;height:22px;}" +
+    "table.grid{width:100%;border-collapse:collapse;margin-top:4px;}" +
+    "table.grid th,table.grid td{border:1px solid #6b7280;padding:5px 6px;font-size:10px;}" +
+    "table.grid th{background:#f3f4f6;}" +
+    "table.sign{width:100%;border-collapse:collapse;margin-top:4px;}" +
+    "td.sg{width:33%;text-align:center;vertical-align:top;padding:0 8px;}" +
+    ".sg-role{font-weight:bold;font-size:11px;}" +
+    ".sg-space{height:58px;}" +
+    ".sg-name{border-top:1px solid #111827;padding-top:4px;font-size:11px;font-weight:bold;}" +
+    ".sg-title{font-size:10px;color:#4b5563;}" +
+    ".sg-date{font-size:9.5px;color:#4b5563;margin-top:6px;}" +
+    ".opt{margin:3px 0;font-size:10.5px;}" +
+    ".note{font-size:9px;color:#6b7280;margin-top:10px;}" +
+    "</style></head><body>" +
+    "<table class='head'><tr>" +
+      "<td><div class='eyebrow'>DAIRY FEED OPS - P2H ALAT BERAT</div><div class='title'>" + judul + "</div></td>" +
+      "<td style='text-align:right;font-size:10px;'>No. Form: <b>" + noForm + "</b><br>Tanggal: <b>" + formatTanggalIndo(ctx.tanggal) + "</b></td>" +
+    "</tr></table>" +
+    bodyHtml +
+    formSignatureBlock() +
+    "<div class='note'>Dicetak dari aplikasi P2H Alat Berat pada " + Utilities.formatDate(new Date(), tz, "dd/MM/yyyy HH:mm") + " WIB.</div>" +
+    "</body></html>";
+}
+
+function buildFormServisHtml(ctx) {
+  var sv = ctx.servis;
+  var jadwalBerikutnya = sv.nextHM === null || sv.nextHM === undefined
+    ? "-"
+    : formatAngkaForm(sv.nextHM) + " HM" + (sv.hasOverride ? " (jadwal manual)" : "");
+
+  var body =
+    "<h2 class='sec'>A. Data Unit &amp; Jadwal Servis</h2>" +
+    "<table class='kv'>" +
+      formKvRow("Nama Unit", "<b>" + escapeHtmlServer(ctx.nama) + "</b>") +
+      formKvRow("HM Saat Ini", ctx.currentHM ? escapeHtmlServer(formatHmValue(ctx.currentHM)) + " HM" : "-") +
+      formKvRow("Servis Terakhir", (sv.lastHM ? escapeHtmlServer(formatHmValue(sv.lastHM)) + " HM" : "-") + (sv.tglTerakhir ? " - " + escapeHtmlServer(sv.tglTerakhir) : "")) +
+      formKvRow("Interval Servis", sv.interval > 0 ? formatAngkaForm(sv.interval) + " HM" : "Belum diatur") +
+      formKvRow("Jadwal Servis Berikutnya", jadwalBerikutnya) +
+      formKvRow("Status Jadwal", "<b>" + servisStatusText(sv) + "</b>") +
+    "</table>" +
+
+    formKondisiSection(ctx) +
+
+    "<h2 class='sec'>C. Uraian Pengajuan Servis (diisi manual)</h2>" +
+    "<div class='opt'>Jenis servis: &nbsp; [&nbsp;&nbsp;&nbsp;] Servis berkala sesuai jadwal &nbsp;&nbsp; [&nbsp;&nbsp;&nbsp;] Perbaikan / trouble &nbsp;&nbsp; [&nbsp;&nbsp;&nbsp;] Lainnya: ..................</div>" +
+    "<div class='opt'>Uraian pekerjaan / keluhan:</div>" +
+    formLines(3) +
+    "<div class='opt'>Kebutuhan sparepart / material:</div>" +
+    formLines(2) +
+    "<div class='opt'>Tanggal servis yang diinginkan: ............................................</div>" +
+
+    "<h2 class='sec'>D. Catatan Mekanik (diisi mekanik)</h2>" +
+    formLines(2);
+
+  return formHtmlShell("FORM PENGAJUAN SERVIS ALAT BERAT", "SRV", ctx, body);
+}
+
+function buildFormGreaseHtml(ctx) {
+  var g = ctx.grease;
+  var interval = g.intervalHariGreasing || GREASING_DEFAULT_INTERVAL_HARI;
+  var terakhir = g.tglGreasingTerakhir
+    ? escapeHtmlServer(g.tglGreasingTerakhir) + (g.picGreasing ? " (petugas: " + escapeHtmlServer(g.picGreasing) + ")" : "")
+    : "Belum pernah dicatat";
+  var berikutnya = g.nextGreasingDate
+    ? escapeHtmlServer(g.nextGreasingDate) + (g.overrideTglGreasing ? " (jadwal manual)" : "")
+    : "-";
+
+  var gridRows = "";
+  for (var i = 1; i <= 6; i++) {
+    gridRows += "<tr><td style='width:6%;text-align:center;'>" + i + "</td><td style='height:20px;'>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>";
+  }
+
+  var body =
+    "<h2 class='sec'>A. Data Unit &amp; Jadwal Greasing</h2>" +
+    "<table class='kv'>" +
+      formKvRow("Nama Unit", "<b>" + escapeHtmlServer(ctx.nama) + "</b>") +
+      formKvRow("HM Saat Ini", ctx.currentHM ? escapeHtmlServer(formatHmValue(ctx.currentHM)) + " HM" : "-") +
+      formKvRow("Siklus Greasing &amp; Pengecekan", "Setiap " + interval + " hari") +
+      formKvRow("Terakhir Dilakukan", terakhir) +
+      formKvRow("Jadwal Berikutnya", berikutnya) +
+      formKvRow("Status Jadwal", "<b>" + greaseStatusText(g) + "</b>") +
+    "</table>" +
+
+    formKondisiSection(ctx) +
+
+    "<h2 class='sec'>C. Pekerjaan Greasing &amp; Pengecekan (diisi manual)</h2>" +
+    "<div class='opt'>Jenis pekerjaan: &nbsp; [&nbsp;&nbsp;&nbsp;] Greasing seluruh titik &nbsp;&nbsp; [&nbsp;&nbsp;&nbsp;] Pengecekan baut/mur &nbsp;&nbsp; [&nbsp;&nbsp;&nbsp;] Pengecekan kebocoran &nbsp;&nbsp; [&nbsp;&nbsp;&nbsp;] Lainnya</div>" +
+    "<table class='grid'>" +
+      "<tr><th>No</th><th style='width:38%;'>Titik / Komponen</th><th style='width:26%;'>Kondisi (Baik / Perlu Perbaikan)</th><th>Keterangan</th></tr>" +
+      gridRows +
+    "</table>" +
+    "<div class='opt'>Grease / pelumas yang digunakan: ............................ &nbsp; Jumlah: ................</div>" +
+    "<div class='opt'>Tanggal pelaksanaan: ............................................</div>";
+
+  return formHtmlShell("FORM PENGAJUAN GREASING &amp; PENGECEKAN", "GRS", ctx, body);
+}
+
+function generateFormPdf(ss, params) {
+  var jenis = String(params.jenis || "servis").toLowerCase();
+  var ctx = getUnitFormContext(ss, params.unit);
+  if (!ctx) return jsonOutput({ result: "error", message: "Unit tidak ditemukan: " + (params.unit || "-") });
+
+  try {
+    var html = jenis === "grease" ? buildFormGreaseHtml(ctx) : buildFormServisHtml(ctx);
+    var prefix = jenis === "grease" ? "Form_Pengajuan_Grease_" : "Form_Pengajuan_Servis_";
+    var filename = (prefix + ctx.nama + "_" + Utilities.formatDate(ctx.tanggal, Session.getScriptTimeZone(), "yyyyMMdd"))
+      .replace(/[^a-zA-Z0-9_\-]/g, "_") + ".pdf";
+    var pdfBlob = Utilities.newBlob(html, "text/html", filename).getAs("application/pdf").setName(filename);
+    return jsonOutput({ result: "success", filename: filename, base64: Utilities.base64Encode(pdfBlob.getBytes()) });
+  } catch (err) {
+    return jsonOutput({ result: "error", message: "Gagal membuat PDF: " + err.toString() });
+  }
+}
+
 var REQUEST_SHEET_NAMES = ["Request_Servis", "Request Servis"];
 var REQUEST_FIELDS = {
   timestamp: ["Timestamp"],
@@ -1109,8 +1627,11 @@ var REQUEST_FIELDS = {
 
 function submitRequestServis(ss, d) {
   var sheet = findSheet(ss, REQUEST_SHEET_NAMES);
-  if (!sheet) return jsonOutput({ result: "error", message: "Sheet Request Servis tidak ditemukan" });
-  
+  if (!sheet) {
+    sheet = ss.insertSheet("Request_Servis");
+    sheet.appendRow(["Timestamp", "Unit", "Pemohon", "Jenis Servis", "Tanggal Diinginkan", "HM", "Catatan", "Status"]);
+  }
+
   appendRowFlexible(sheet, {
     timestamp: { candidates: REQUEST_FIELDS.timestamp, value: new Date() },
     unit: { candidates: REQUEST_FIELDS.unit, value: d.alat },
@@ -1122,7 +1643,43 @@ function submitRequestServis(ss, d) {
     status: { candidates: REQUEST_FIELDS.status, value: "Menunggu" }
   });
 
-  return jsonOutput({ result: "success" });
+  return jsonOutput({ result: "success", message: "Request servis untuk " + d.alat + " berhasil diajukan" });
+}
+
+/** Menandai satu request servis sebagai "Selesai" (dicocokkan lewat unit + timestamp, seperti resolveTrouble). */
+function resolveRequestServis(ss, d) {
+  var sheet = findSheet(ss, REQUEST_SHEET_NAMES);
+  if (!sheet) return jsonOutput({ result: "error", message: "Sheet Request Servis tidak ditemukan" });
+
+  var headerMap = getHeaderMap(sheet);
+  var colStatus = resolveColumn(headerMap, sheet, REQUEST_FIELDS.status);
+  var colUnit = resolveColumn(headerMap, sheet, REQUEST_FIELDS.unit);
+  var colTs = resolveColumn(headerMap, sheet, REQUEST_FIELDS.timestamp);
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return jsonOutput({ result: "error", message: "Data request tidak ditemukan" });
+
+  var targetUnit = String(d.unit || d.alat || "").trim().toLowerCase();
+  var targetTs = String(d.timestamp || "").trim();
+
+  var data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+
+  var updatedCount = 0;
+  for (var i = 0; i < data.length; i++) {
+    var rUnit = String(data[i][colUnit - 1]).trim().toLowerCase();
+    var rTs = data[i][colTs - 1] ? Utilities.formatDate(new Date(data[i][colTs - 1]), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm") : "";
+
+    if (rUnit === targetUnit && (!targetTs || rTs === targetTs)) {
+      sheet.getRange(i + 2, colStatus).setValue("Selesai");
+      updatedCount++;
+    }
+  }
+
+  if (updatedCount > 0) {
+    return jsonOutput({ result: "success", message: "Request servis berhasil dikonfirmasi Selesai!" });
+  } else {
+    return jsonOutput({ result: "error", message: "Gagal menemukan record request yang sesuai." });
+  }
 }
 
 function getRequestHistory(ss, unitFilter, limit) {
